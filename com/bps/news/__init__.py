@@ -8,6 +8,7 @@ import com.bps.news.ui
 import com.bps.news
 import com.bps.news.database
 import com.bps.news.updater
+import com.bps.news.parentalctrl
 
 
 class App(Gtk.Window):
@@ -251,6 +252,14 @@ class App(Gtk.Window):
         Gtk.main_quit()
 
     def run(self):
+        if not com.bps.news.parentalctrl.check_parental_control():
+            # inform user why program will be closed
+            dlg = com.bps.news.parentalctrl.DisallowedDialog(self)
+            dlg.run()
+            dlg.destroy()
+
+            return
+
         Gdk.threads_init()
         Gdk.threads_enter()
         Gtk.main()

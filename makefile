@@ -9,6 +9,7 @@ install:
 	cp ./com/bps/news/database.py /usr/lib/python3/dist-packages/com/bps/news/database.py
 	cp ./com/bps/news/ui.py /usr/lib/python3/dist-packages/com/bps/news/ui.py
 	cp ./com/bps/news/updater.py /usr/lib/python3/dist-packages/com/bps/news/updater.py
+	cp ./com/bps/news/parentalctrl.py /usr/lib/python3/dist-packages/com/bps/news/parentalctrl.py
 	cp ./main.py /usr/bin/news
 
 	chmod +x /usr/bin/news
