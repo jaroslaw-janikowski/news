@@ -484,3 +484,28 @@ class FolderDialog(Gtk.Dialog):
 
     def _on_rss_url_entry(self, e):
         self.response(Gtk.ResponseType.OK)
+
+
+class AboutDialog(Gtk.Dialog):
+    def __init__(self, parent):
+        super().__init__()
+        self.set_size_request(320, 280)
+        self.set_modal(True)
+        self.set_title('About')
+        self.set_transient_for(parent)
+        self.set_default_response(Gtk.ResponseType.OK)
+        self.set_skip_taskbar_hint(True)
+        self.set_destroy_with_parent(True)
+        self.add_button('OK', Gtk.ResponseType.OK)
+
+        text_buffer = Gtk.TextBuffer()
+        text_buffer.set_text('''Authors:
+- jaroslaw.janikowski@gmail.com (programming)
+- www.freepik.com (icons)''')
+        text_view = Gtk.TextView()
+        text_view.set_editable(False)
+        text_view.set_cursor_visible(False)
+        text_view.set_buffer(text_buffer)
+        self.vbox.pack_start(text_view, True, True, 0)
+
+        self.show_all()

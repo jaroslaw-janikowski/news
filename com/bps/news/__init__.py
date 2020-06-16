@@ -91,6 +91,16 @@ class App(Gtk.Window):
         news_goto_item.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
         news_menu.append(news_goto_item)
 
+        # help menu
+        help_menu_item = Gtk.MenuItem('Help')
+        help_menu = Gtk.Menu()
+        help_menu_item.set_submenu(help_menu)
+        menubar.append(help_menu_item)
+
+        about_menu_item = Gtk.MenuItem('About')
+        about_menu_item.connect('activate', self._on_about_item)
+        help_menu.append(about_menu_item)
+
         paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         vbox.pack_start(paned, True, True, 0)
 
@@ -127,6 +137,11 @@ class App(Gtk.Window):
             self._channel_viewer.toggle_folder(folder['title'], folder['expanded'])
 
         self.show_all()
+
+    def _on_about_item(self, e):
+        dlg = com.bps.news.ui.AboutDialog(self)
+        dlg.run()
+        dlg.destroy()
 
     def _on_folder_toggle(self, expanding, folder_title):
         self._db.set_folder_expanded(folder_title, expanding)
