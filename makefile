@@ -3,6 +3,7 @@ install_dependencies_ubuntu:
 
 install:
 	mkdir -p /usr/lib/python3/dist-packages/com/bps/news
+	mkdir -p /usr/share/icons/news
 
 	cp ./com/bps/__init__.py /usr/lib/python3/dist-packages/com/bps/__init__.py
 	cp ./com/bps/news/__init__.py /usr/lib/python3/dist-packages/com/bps/news/__init__.py
@@ -10,6 +11,11 @@ install:
 	cp ./com/bps/news/ui.py /usr/lib/python3/dist-packages/com/bps/news/ui.py
 	cp ./com/bps/news/updater.py /usr/lib/python3/dist-packages/com/bps/news/updater.py
 	cp ./com/bps/news/parentalctrl.py /usr/lib/python3/dist-packages/com/bps/news/parentalctrl.py
+	cp ./com/bps/news/resources.py /usr/lib/python3/dist-packages/com/bps/news/resources.py
+
+	cp ./res/icons/folder.png /usr/share/icons/news/folder.png
+	cp ./res/icons/rss.png /usr/share/icons/news/rss.png
+
 	cp ./main.py /usr/bin/news
 
 	chmod +x /usr/bin/news

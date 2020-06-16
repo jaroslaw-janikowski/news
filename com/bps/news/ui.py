@@ -2,6 +2,9 @@ import random
 import html.parser
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import GdkPixbuf
+from com.bps.news.resources import resource
+
 
 class NewsListView(Gtk.ScrolledWindow):
     def __init__(self, on_activate=None):
@@ -171,6 +174,8 @@ class ChannelDialog(Gtk.Dialog):
 
 
 class ChannelViewer(Gtk.ScrolledWindow):
+    '''Widget with tree of channels.'''
+
     ITEM_TYPE_FOLDER = 0
     ITEM_TYPE_CHANNEL = 1
 
@@ -184,7 +189,12 @@ class ChannelViewer(Gtk.ScrolledWindow):
         self._on_dragdrop_channel = on_dragdrop_channel
         self._on_folder_toggle = on_folder_toggle
 
-        self._tree_store = Gtk.TreeStore(str, int, int)  # title, unread_count, type(0 - folder, 1 - channel)
+        self._tree_store = Gtk.TreeStore(str, int, int, GdkPixbuf.Pixbuf)  # title, unread_count, type(0 - folder, 1 - channel)
+
+        # icon column
+        icon_renderer = Gtk.CellRendererPixbuf()
+        icon_column = Gtk.TreeViewColumn(None, icon_renderer)
+        icon_column.add_attribute(icon_renderer, 'pixbuf', 3)
 
         # title column
         title_renderer = Gtk.CellRendererText()
@@ -201,6 +211,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
         self.set_size_request(150, 100)
         self.add(self._tree_view)
         self._tree_view.set_headers_visible(False)
+        self._tree_view.append_column(icon_column)
         self._tree_view.append_column(title_column)
         self._tree_view.append_column(news_count_column)
         self._tree_view.connect('button_press_event', self._on_channel_tree_button_press)
@@ -269,7 +280,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
         # przenieś element poprzez zrobienie kopii i usunięcie starego
         self._tree_store.remove(source_iter)
-        new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL))
+        new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
 
         # odśwież ilość nieprzeczytanych w folderze do którego wrzuciłeś ciągnięty kanał
         self._folder_update_unread(dest_iter)
@@ -283,7 +294,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
             self._on_dragdrop_channel(channel_title, folder_title)
 
     def add_folder(self, channel_title, expanded=False):
-        iter_ = self._tree_store.append(None, (channel_title, 0, self.ITEM_TYPE_FOLDER))
+        iter_ = self._tree_store.append(None, (channel_title, 0, self.ITEM_TYPE_FOLDER, resource.icons['folder']))
 
     def toggle_folder(self, folder_title, expand):
         '''Zwiń / rozwiń katalog bez emitowania zdarzeń.'''
@@ -324,7 +335,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
     def add_channel(self, channel_title, unread_count, folder_title=None):
         folder_iter = self._get_folder_iter(folder_title)
-        self._tree_store.append(folder_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL))
+        self._tree_store.append(folder_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
 
         # jeśli kanał dodano do folderu to uaktualnij liczbę nieprzeczytanych w tym folderze
         if folder_iter is not None:
