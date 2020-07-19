@@ -144,16 +144,19 @@ class ChannelDialog(Gtk.Dialog):
         self.set_skip_taskbar_hint(True)
         self.set_destroy_with_parent(True)
         self.add_button('Cancel', Gtk.ResponseType.CANCEL)
-        self.add_button('OK', Gtk.ResponseType.OK)
+        self._ok_button = self.add_button('OK', Gtk.ResponseType.OK)
+        self._ok_button.set_sensitive(False)
 
         # form
         title_label = Gtk.Label('Channel title')
         self._rss_title_entry = Gtk.Entry()
+        self._rss_title_entry.connect('changed', self._on_validate)
         self.vbox.pack_start(title_label, False, False, 0)
         self.vbox.pack_start(self._rss_title_entry, False, False, 0)
 
         url_label = Gtk.Label('URL')
         self._rss_url_entry = Gtk.Entry()
+        self._rss_url_entry.connect('changed', self._on_validate)
         self._rss_url_entry.connect('activate', self._on_rss_url_entry)
         self.vbox.pack_start(url_label, False, False, 0)
         self.vbox.pack_start(self._rss_url_entry, False, False, 0)
@@ -172,6 +175,7 @@ class ChannelDialog(Gtk.Dialog):
         self._rss_title_entry.set_text(values['title'])
         self._rss_url_entry.set_text(values['url'])
         self._channel_type_combo.set_active(values['channel_type'])
+        self._on_validate()
 
     def get_data(self):
         return {
@@ -182,6 +186,13 @@ class ChannelDialog(Gtk.Dialog):
 
     def _on_rss_url_entry(self, e):
         self.response(Gtk.ResponseType.OK)
+
+    def _on_validate(self, event=None):
+        b = all([
+            self._rss_title_entry.get_text(),
+            self._rss_url_entry.get_text()
+        ])
+        self._ok_button.set_sensitive(b)
 
 
 class ChannelViewer(Gtk.ScrolledWindow):
