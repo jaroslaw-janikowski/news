@@ -9,6 +9,7 @@ create table channel(
     title varchar(100) not null,
     url varchar(512) not null,
     folder_id integer,
+    channel_type integer default 0,
     foreign key (folder_id) references folder(id)
 );
 

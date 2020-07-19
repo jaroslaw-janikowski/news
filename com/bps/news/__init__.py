@@ -130,7 +130,7 @@ class App(Gtk.Window):
         for folder in folders:
             self._channel_viewer.add_folder(folder['title'])
 
-        for id, title, url, unread_count, folder_title in self._db.get_channels():
+        for id, title, url, channel_type, unread_count, folder_title in self._db.get_channels():
             self._channel_viewer.add_channel(title, unread_count, folder_title)
 
         # rozwin katalogi jeśli trzeba
@@ -238,7 +238,7 @@ class App(Gtk.Window):
         if dlg.run() == Gtk.ResponseType.OK:
             data = dlg.get_data()
             if data:
-                if self._db.add_channel(data['title'], data['url']):
+                if self._db.add_channel(data['title'], data['url'], data['channel_type']):
                     self._channel_viewer.add_channel(data['title'], 0)
 
         dlg.destroy()

@@ -3,6 +3,7 @@ import html.parser
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GdkPixbuf
+from com.bps.news.updater import Channel
 from com.bps.news.resources import resource
 
 
@@ -146,27 +147,37 @@ class ChannelDialog(Gtk.Dialog):
         self.add_button('OK', Gtk.ResponseType.OK)
 
         # form
-        rss_title_label = Gtk.Label('Channel title')
+        title_label = Gtk.Label('Channel title')
         self._rss_title_entry = Gtk.Entry()
-        self.vbox.pack_start(rss_title_label, False, False, 0)
+        self.vbox.pack_start(title_label, False, False, 0)
         self.vbox.pack_start(self._rss_title_entry, False, False, 0)
 
-        rss_url_label = Gtk.Label('URL')
+        url_label = Gtk.Label('URL')
         self._rss_url_entry = Gtk.Entry()
         self._rss_url_entry.connect('activate', self._on_rss_url_entry)
-        self.vbox.pack_start(rss_url_label, False, False, 0)
+        self.vbox.pack_start(url_label, False, False, 0)
         self.vbox.pack_start(self._rss_url_entry, False, False, 0)
+
+        channel_type_label = Gtk.Label('Channel type')
+        self._channel_type_combo = Gtk.ComboBoxText()
+        for channel_id, channel_class in Channel.Map.items():
+            self._channel_type_combo.append(str(channel_id), channel_class)
+        self._channel_type_combo.set_active(0)
+        self.vbox.pack_start(channel_type_label, False, False, 0)
+        self.vbox.pack_start(self._channel_type_combo, False, False, 0)
 
         self.show_all()
 
     def set_data(self, values):
         self._rss_title_entry.set_text(values['title'])
         self._rss_url_entry.set_text(values['url'])
+        self._channel_type_combo.set_active(values['channel_type'])
 
     def get_data(self):
         return {
             'title': self._rss_title_entry.get_text(),
-            'url': self._rss_url_entry.get_text()
+            'url': self._rss_url_entry.get_text(),
+            'channel_type': self._channel_type_combo.get_active()
         }
 
     def _on_rss_url_entry(self, e):
