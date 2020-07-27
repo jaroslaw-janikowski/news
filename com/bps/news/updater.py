@@ -30,7 +30,13 @@ class RssChannel(Channel):
         self._channel_type = ChannelType.RSS
 
     def get_news(self):
-        return feedparser.parse(self._url)['items']
+        data = feedparser.parse(self._url)
+
+        # do not hide exceptions from getting data
+        if 'bozo_exception' in data:
+            raise data['bozo_exception']
+
+        return data['items']
 
 
 class RestApiChannel(Channel):
@@ -50,11 +56,14 @@ class Updater(threading.Thread):
         # dla każdego kanału w bazie
         for id, title, url, channel_type, unread_count, folder_title in self._channels:
             channel = Channel.create_channel(url, channel_type)
-            items = channel.get_news()
+            try:
+                items = channel.get_news()
 
-            # dodaj nowe wpisy do bazy danych,
-            # powtarajace się zostaną zignorowane
-            self._db.add_news(title, items)
+                # dodaj nowe wpisy do bazy danych,
+                # powtarajace się zostaną zignorowane
+                self._db.add_news(title, items)
+            except Exception as e:
+                print(f'Error: Channel name: {title}; exception: {e}')
 
         if callable(self._on_update_end):
             self._on_update_end()
