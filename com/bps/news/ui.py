@@ -577,10 +577,9 @@ class ProgressDialog(Gtk.Dialog):
         log_scrollbars.add(self._log_text_view)
         self.vbox.pack_start(log_scrollbars, True, True, 0)
 
-    def _on_response(self, response_id, user_data):
-        if callable(self._on_cancel):
+    def _on_response(self, progress_dialog, response_id):
+        if response_id == Gtk.ResponseType.DELETE_EVENT or response_id == Gtk.ResponseType.NONE or response_id == Gtk.ResponseType.CANCEL and callable(self._on_cancel):
             self._on_cancel()
-            # self.response(Gtk.ResponseType.CANCEL)
             return True
 
     def set_position(self, pos, msg=None):
@@ -588,8 +587,9 @@ class ProgressDialog(Gtk.Dialog):
 
         if msg:
             end_iter = self._log_text_buffer.get_end_iter()
-            self._log_text_buffer.insert(end_iter, f'{msg}\n')
-            self._log_text_view.scroll_to_iter(end_iter, 0.3, False, 0, 0)
+            if end_iter and self.is_visible():
+                self._log_text_buffer.insert(end_iter, f'{msg}\n')
+                self._log_text_view.scroll_to_iter(end_iter, 0.3, False, 0, 0)
 
     def show(self):
         # reset dialog controls

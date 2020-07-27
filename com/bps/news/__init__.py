@@ -16,7 +16,7 @@ class App(Gtk.Window):
     def __init__(self):
         super().__init__(Gtk.WindowType.TOPLEVEL, 'News')
         self.set_title('News')
-        self._progress_dialog = com.bps.news.ui.ProgressDialog(self, self._on_progress_cancel)
+        self._progress_dialog = None
         self.connect('destroy', self._on_destroy)
 
         # otworzenie / utworzenie pliku bazy danych
@@ -249,6 +249,7 @@ class App(Gtk.Window):
 
     def _on_update_all_item(self, e):
         self._update_all_item.set_sensitive(False)
+        self._progress_dialog = com.bps.news.ui.ProgressDialog(self, self._on_progress_cancel)
         self._progress_dialog.show()
 
         channels = self._db.get_channels()
@@ -261,7 +262,7 @@ class App(Gtk.Window):
     def _on_update_end(self):
         self._update_unread_count()
         self._update_all_item.set_sensitive(True)
-        self._progress_dialog.hide()
+        self._progress_dialog.destroy()
 
     def _update_unread_count(self):
         # uaktualnij ilość nieprzeczytanych we wszystkich kanałach
