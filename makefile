@@ -1,7 +1,11 @@
 install_dependencies_ubuntu:
 	sudo apt install python3-gi gobject-introspection gir1.2-gtk-3.0 python3-feedparser
 
-install:
+uninstall:
+	rm -rf /usr/lib/python3/dist-packages/com/bps/news
+	rm -rf /usr/share/icons/news
+
+install: uninstall
 	mkdir -p /usr/lib/python3/dist-packages/com/bps/news
 	mkdir -p /usr/share/icons/news
 
