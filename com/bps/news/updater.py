@@ -46,15 +46,25 @@ class RestApiChannel(Channel):
 
 
 class Updater(threading.Thread):
-    def __init__(self, database, channels, on_update_end=None):
+    def __init__(self, database, channels, on_channel_end=None, on_update_end=None):
         super().__init__()
         self._db = database
         self._channels = channels
+        self._on_channel_end = on_channel_end
         self._on_update_end = on_update_end
+        self._do_stop = False
 
     def run(self):
+        num_channels = len(self._channels)
+        channel_index = 0.001
+
         # dla każdego kanału w bazie
         for id, title, url, channel_type, unread_count, folder_title in self._channels:
+            # user requested end of update?
+            if self._do_stop:
+                break
+
+            # get items from next channel
             channel = Channel.create_channel(url, channel_type)
             try:
                 items = channel.get_news()
@@ -62,8 +72,18 @@ class Updater(threading.Thread):
                 # dodaj nowe wpisy do bazy danych,
                 # powtarajace się zostaną zignorowane
                 self._db.add_news(title, items)
+
+                if callable(self._on_channel_end):
+                    self._on_channel_end(title, channel_index, num_channels, items)
+
             except Exception as e:
                 print(f'Error: Channel name: {title}; exception: {e}')
 
+            finally:
+                channel_index += 1
+
         if callable(self._on_update_end):
             self._on_update_end()
+
+    def cancel(self):
+        self._do_stop = True

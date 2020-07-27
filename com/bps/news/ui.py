@@ -542,3 +542,59 @@ class AboutDialog(Gtk.Dialog):
         self.vbox.pack_start(text_view, True, True, 0)
 
         self.show_all()
+
+
+class ProgressDialog(Gtk.Dialog):
+    def __init__(self, parent, on_cancel=None):
+        super().__init__()
+        self.set_size_request(640, 480)
+        self.set_modal(True)
+        self.set_title('Operation progress...')
+        self.set_transient_for(parent)
+        self.set_default_response(Gtk.ResponseType.CANCEL)
+        self.set_skip_taskbar_hint(True)
+        self.set_destroy_with_parent(True)
+        self.add_button('Cancel', Gtk.ResponseType.CANCEL)
+        self._on_cancel = on_cancel
+        self.connect('response', self._on_response)
+
+        # progress bar
+        progress_label = Gtk.Label('Progress')
+        self.vbox.pack_start(progress_label, False, False, 0)
+        self._progressbar = Gtk.ProgressBar()
+        self.vbox.pack_start(self._progressbar, False, False, 0)
+
+        # log view
+        log_label = Gtk.Label('Log')
+        self.vbox.pack_start(log_label, False, False, 0)
+        self._log_text_buffer = Gtk.TextBuffer()
+        self._log_text_view = Gtk.TextView()
+        self._log_text_view.set_editable(False)
+        self._log_text_view.set_cursor_visible(False)
+        self._log_text_view.set_buffer(self._log_text_buffer)
+
+        log_scrollbars = Gtk.ScrolledWindow()
+        log_scrollbars.add(self._log_text_view)
+        self.vbox.pack_start(log_scrollbars, True, True, 0)
+
+    def _on_response(self, response_id, user_data):
+        if callable(self._on_cancel):
+            self._on_cancel()
+            # self.response(Gtk.ResponseType.CANCEL)
+            return True
+
+    def set_position(self, pos, msg=None):
+        self._progressbar.set_fraction(pos)
+
+        if msg:
+            end_iter = self._log_text_buffer.get_end_iter()
+            self._log_text_buffer.insert(end_iter, f'{msg}\n')
+            self._log_text_view.scroll_to_iter(end_iter, 0.3, False, 0, 0)
+
+    def show(self):
+        # reset dialog controls
+        self._log_text_buffer.set_text('')
+        self.set_position(0.01)
+
+        # show all controls
+        self.show_all()
