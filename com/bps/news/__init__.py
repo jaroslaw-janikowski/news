@@ -4,6 +4,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import GObject
 from com.bps.news.resources import resource
 import com.bps.news.ui
 import com.bps.news
@@ -262,7 +263,9 @@ class App(Gtk.Window):
     def _on_update_end(self):
         self._update_unread_count()
         self._update_all_item.set_sensitive(True)
-        self._progress_dialog.destroy()
+
+        # avoid crash
+        GObject.idle_add(lambda: self._progress_dialog.destroy())
 
     def _update_unread_count(self):
         # uaktualnij ilość nieprzeczytanych we wszystkich kanałach
