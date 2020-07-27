@@ -22,7 +22,6 @@ class DisallowedDialog(Gtk.Dialog):
 
 def check_parental_control():
     # check parental control rules
-    return True
     today = datetime.datetime.now()
     if calendar.weekday(today.year, today.month, today.day) in (5, 6) or today.hour > 16:
         return True
