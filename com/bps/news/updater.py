@@ -1,5 +1,6 @@
 import threading
 import feedparser
+from gi.repository import GObject
 
 
 class ChannelType:
@@ -74,7 +75,7 @@ class Updater(threading.Thread):
                 self._db.add_news(title, items)
 
                 if callable(self._on_channel_end):
-                    self._on_channel_end(title, channel_index, num_channels, items)
+                    GObject.idle_add(self._on_channel_end, title, channel_index, num_channels, items)
 
             except Exception as e:
                 print(f'Error: Channel name: {title}; exception: {e}')
@@ -83,7 +84,7 @@ class Updater(threading.Thread):
                 channel_index += 1
 
         if callable(self._on_update_end):
-            self._on_update_end()
+            GObject.idle_add(self._on_update_end)
 
     def cancel(self):
         self._do_stop = True
