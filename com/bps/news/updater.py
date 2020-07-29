@@ -34,8 +34,10 @@ class RssChannel(Channel):
         data = feedparser.parse(self._url)
 
         # do not hide exceptions from getting data
-        if 'bozo_exception' in data:
-            raise data['bozo_exception']
+        # raising exception ignores invalid rss channels from beeing viewed by user
+        # even if this XML is only partially invalid.
+        # if 'bozo_exception' in data:
+        #     raise data['bozo_exception']
 
         return data['items']
 
