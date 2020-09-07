@@ -4,16 +4,20 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import GObject
+from com.bps.news.resources import resource
 import com.bps.news.ui
 import com.bps.news
 import com.bps.news.database
 import com.bps.news.updater
+import com.bps.news.parentalctrl
 
 
 class App(Gtk.Window):
     def __init__(self):
         super().__init__(Gtk.WindowType.TOPLEVEL, 'News')
         self.set_title('News')
+        self._progress_dialog = None
         self.connect('destroy', self._on_destroy)
 
         # otworzenie / utworzenie pliku bazy danych
@@ -90,6 +94,16 @@ class App(Gtk.Window):
         news_goto_item.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
         news_menu.append(news_goto_item)
 
+        # help menu
+        help_menu_item = Gtk.MenuItem('Help')
+        help_menu = Gtk.Menu()
+        help_menu_item.set_submenu(help_menu)
+        menubar.append(help_menu_item)
+
+        about_menu_item = Gtk.MenuItem('About')
+        about_menu_item.connect('activate', self._on_about_item)
+        help_menu.append(about_menu_item)
+
         paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         vbox.pack_start(paned, True, True, 0)
 
@@ -118,7 +132,7 @@ class App(Gtk.Window):
         for folder in folders:
             self._channel_viewer.add_folder(folder['title'])
 
-        for id, title, url, unread_count, folder_title in self._db.get_channels():
+        for id, title, url, channel_type, unread_count, folder_title in self._db.get_channels():
             self._channel_viewer.add_channel(title, unread_count, folder_title)
 
         # rozwin katalogi jeśli trzeba
@@ -126,6 +140,14 @@ class App(Gtk.Window):
             self._channel_viewer.toggle_folder(folder['title'], folder['expanded'])
 
         self.show_all()
+
+    def _on_progress_cancel(self):
+        self._updater.cancel()
+
+    def _on_about_item(self, e):
+        dlg = com.bps.news.ui.AboutDialog(self)
+        dlg.run()
+        dlg.destroy()
 
     def _on_folder_toggle(self, expanding, folder_title):
         self._db.set_folder_expanded(folder_title, expanding)
@@ -221,20 +243,29 @@ class App(Gtk.Window):
         if dlg.run() == Gtk.ResponseType.OK:
             data = dlg.get_data()
             if data:
-                if self._db.add_channel(data['title'], data['url']):
+                if self._db.add_channel(data['title'], data['url'], data['channel_type']):
                     self._channel_viewer.add_channel(data['title'], 0)
 
         dlg.destroy()
 
     def _on_update_all_item(self, e):
         self._update_all_item.set_sensitive(False)
+        self._progress_dialog = com.bps.news.ui.ProgressDialog(self, self._on_progress_cancel)
+        self._progress_dialog.show()
+
         channels = self._db.get_channels()
-        updater = com.bps.news.updater.Updater(self._db, channels, self._on_update_end)
-        updater.start()
+        self._updater = com.bps.news.updater.Updater(self._db, channels, self._on_channel_end, self._on_update_end)
+        self._updater.start()
+
+    def _on_channel_end(self, channel_title, channel_index, num_channels, channel_items):
+        self._progress_dialog.set_position(channel_index / num_channels, f'Pobieram wiadomości z kanału {channel_title}')
 
     def _on_update_end(self):
         self._update_unread_count()
         self._update_all_item.set_sensitive(True)
+
+        # avoid crash
+        GObject.idle_add(lambda: self._progress_dialog.destroy())
 
     def _update_unread_count(self):
         # uaktualnij ilość nieprzeczytanych we wszystkich kanałach
@@ -251,6 +282,14 @@ class App(Gtk.Window):
         Gtk.main_quit()
 
     def run(self):
+        if not com.bps.news.parentalctrl.check_parental_control():
+            # inform user why program will be closed
+            dlg = com.bps.news.parentalctrl.DisallowedDialog(self)
+            dlg.run()
+            dlg.destroy()
+
+            return
+
         Gdk.threads_init()
         Gdk.threads_enter()
         Gtk.main()

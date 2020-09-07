@@ -2,6 +2,10 @@ import random
 import html.parser
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import GdkPixbuf
+from com.bps.news.updater import Channel
+from com.bps.news.resources import resource
+
 
 class NewsListView(Gtk.ScrolledWindow):
     def __init__(self, on_activate=None):
@@ -140,37 +144,60 @@ class ChannelDialog(Gtk.Dialog):
         self.set_skip_taskbar_hint(True)
         self.set_destroy_with_parent(True)
         self.add_button('Cancel', Gtk.ResponseType.CANCEL)
-        self.add_button('OK', Gtk.ResponseType.OK)
+        self._ok_button = self.add_button('OK', Gtk.ResponseType.OK)
+        self._ok_button.set_sensitive(False)
 
         # form
-        rss_title_label = Gtk.Label('Channel title')
+        title_label = Gtk.Label('Channel title')
         self._rss_title_entry = Gtk.Entry()
-        self.vbox.pack_start(rss_title_label, False, False, 0)
+        self._rss_title_entry.connect('changed', self._on_validate)
+        self.vbox.pack_start(title_label, False, False, 0)
         self.vbox.pack_start(self._rss_title_entry, False, False, 0)
 
-        rss_url_label = Gtk.Label('URL')
+        url_label = Gtk.Label('URL')
         self._rss_url_entry = Gtk.Entry()
+        self._rss_url_entry.connect('changed', self._on_validate)
         self._rss_url_entry.connect('activate', self._on_rss_url_entry)
-        self.vbox.pack_start(rss_url_label, False, False, 0)
+        self.vbox.pack_start(url_label, False, False, 0)
         self.vbox.pack_start(self._rss_url_entry, False, False, 0)
+
+        channel_type_label = Gtk.Label('Channel type')
+        self._channel_type_combo = Gtk.ComboBoxText()
+        for channel_id, channel_class in Channel.Map.items():
+            self._channel_type_combo.append(str(channel_id), channel_class)
+        self._channel_type_combo.set_active(0)
+        self.vbox.pack_start(channel_type_label, False, False, 0)
+        self.vbox.pack_start(self._channel_type_combo, False, False, 0)
 
         self.show_all()
 
     def set_data(self, values):
         self._rss_title_entry.set_text(values['title'])
         self._rss_url_entry.set_text(values['url'])
+        self._channel_type_combo.set_active(values['channel_type'])
+        self._on_validate()
 
     def get_data(self):
         return {
             'title': self._rss_title_entry.get_text(),
-            'url': self._rss_url_entry.get_text()
+            'url': self._rss_url_entry.get_text(),
+            'channel_type': self._channel_type_combo.get_active()
         }
 
     def _on_rss_url_entry(self, e):
         self.response(Gtk.ResponseType.OK)
 
+    def _on_validate(self, event=None):
+        b = all([
+            self._rss_title_entry.get_text(),
+            self._rss_url_entry.get_text()
+        ])
+        self._ok_button.set_sensitive(b)
+
 
 class ChannelViewer(Gtk.ScrolledWindow):
+    '''Widget with tree of channels.'''
+
     ITEM_TYPE_FOLDER = 0
     ITEM_TYPE_CHANNEL = 1
 
@@ -184,7 +211,12 @@ class ChannelViewer(Gtk.ScrolledWindow):
         self._on_dragdrop_channel = on_dragdrop_channel
         self._on_folder_toggle = on_folder_toggle
 
-        self._tree_store = Gtk.TreeStore(str, int, int)  # title, unread_count, type(0 - folder, 1 - channel)
+        self._tree_store = Gtk.TreeStore(str, int, int, GdkPixbuf.Pixbuf)  # title, unread_count, type(0 - folder, 1 - channel)
+
+        # icon column
+        icon_renderer = Gtk.CellRendererPixbuf()
+        icon_column = Gtk.TreeViewColumn(None, icon_renderer)
+        icon_column.add_attribute(icon_renderer, 'pixbuf', 3)
 
         # title column
         title_renderer = Gtk.CellRendererText()
@@ -201,6 +233,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
         self.set_size_request(150, 100)
         self.add(self._tree_view)
         self._tree_view.set_headers_visible(False)
+        self._tree_view.append_column(icon_column)
         self._tree_view.append_column(title_column)
         self._tree_view.append_column(news_count_column)
         self._tree_view.connect('button_press_event', self._on_channel_tree_button_press)
@@ -269,7 +302,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
         # przenieś element poprzez zrobienie kopii i usunięcie starego
         self._tree_store.remove(source_iter)
-        new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL))
+        new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
 
         # odśwież ilość nieprzeczytanych w folderze do którego wrzuciłeś ciągnięty kanał
         self._folder_update_unread(dest_iter)
@@ -283,7 +316,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
             self._on_dragdrop_channel(channel_title, folder_title)
 
     def add_folder(self, channel_title, expanded=False):
-        iter_ = self._tree_store.append(None, (channel_title, 0, self.ITEM_TYPE_FOLDER))
+        iter_ = self._tree_store.append(None, (channel_title, 0, self.ITEM_TYPE_FOLDER, resource.icons['folder']))
 
     def toggle_folder(self, folder_title, expand):
         '''Zwiń / rozwiń katalog bez emitowania zdarzeń.'''
@@ -324,7 +357,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
     def add_channel(self, channel_title, unread_count, folder_title=None):
         folder_iter = self._get_folder_iter(folder_title)
-        self._tree_store.append(folder_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL))
+        self._tree_store.append(folder_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
 
         # jeśli kanał dodano do folderu to uaktualnij liczbę nieprzeczytanych w tym folderze
         if folder_iter is not None:
@@ -484,3 +517,84 @@ class FolderDialog(Gtk.Dialog):
 
     def _on_rss_url_entry(self, e):
         self.response(Gtk.ResponseType.OK)
+
+
+class AboutDialog(Gtk.Dialog):
+    def __init__(self, parent):
+        super().__init__()
+        self.set_size_request(320, 280)
+        self.set_modal(True)
+        self.set_title('About')
+        self.set_transient_for(parent)
+        self.set_default_response(Gtk.ResponseType.OK)
+        self.set_skip_taskbar_hint(True)
+        self.set_destroy_with_parent(True)
+        self.add_button('OK', Gtk.ResponseType.OK)
+
+        text_buffer = Gtk.TextBuffer()
+        text_buffer.set_text('''Authors:
+- jaroslaw.janikowski@gmail.com (programming)
+- www.freepik.com (icons)''')
+        text_view = Gtk.TextView()
+        text_view.set_editable(False)
+        text_view.set_cursor_visible(False)
+        text_view.set_buffer(text_buffer)
+        self.vbox.pack_start(text_view, True, True, 0)
+
+        self.show_all()
+
+
+class ProgressDialog(Gtk.Dialog):
+    def __init__(self, parent, on_cancel=None):
+        super().__init__()
+        self.set_size_request(640, 480)
+        self.set_modal(True)
+        self.set_title('Operation progress...')
+        self.set_transient_for(parent)
+        self.set_default_response(Gtk.ResponseType.CANCEL)
+        self.set_skip_taskbar_hint(True)
+        self.set_destroy_with_parent(True)
+        self.add_button('Cancel', Gtk.ResponseType.CANCEL)
+        self._on_cancel = on_cancel
+        self.connect('response', self._on_response)
+
+        # progress bar
+        progress_label = Gtk.Label('Progress')
+        self.vbox.pack_start(progress_label, False, False, 0)
+        self._progressbar = Gtk.ProgressBar()
+        self.vbox.pack_start(self._progressbar, False, False, 0)
+
+        # log view
+        log_label = Gtk.Label('Log')
+        self.vbox.pack_start(log_label, False, False, 0)
+        self._log_text_buffer = Gtk.TextBuffer()
+        self._log_text_view = Gtk.TextView()
+        self._log_text_view.set_editable(False)
+        self._log_text_view.set_cursor_visible(False)
+        self._log_text_view.set_buffer(self._log_text_buffer)
+
+        log_scrollbars = Gtk.ScrolledWindow()
+        log_scrollbars.add(self._log_text_view)
+        self.vbox.pack_start(log_scrollbars, True, True, 0)
+
+    def _on_response(self, progress_dialog, response_id):
+        if response_id == Gtk.ResponseType.DELETE_EVENT or response_id == Gtk.ResponseType.NONE or response_id == Gtk.ResponseType.CANCEL and callable(self._on_cancel):
+            self._on_cancel()
+            return True
+
+    def set_position(self, pos, msg=None):
+        self._progressbar.set_fraction(pos)
+
+        if msg:
+            end_iter = self._log_text_buffer.get_end_iter()
+            if end_iter and self.is_visible():
+                self._log_text_buffer.insert(end_iter, f'{msg}\n')
+                self._log_text_view.scroll_to_iter(end_iter, 0.3, False, 0, 0)
+
+    def show(self):
+        # reset dialog controls
+        self._log_text_buffer.set_text('')
+        self.set_position(0.01)
+
+        # show all controls
+        self.show_all()
