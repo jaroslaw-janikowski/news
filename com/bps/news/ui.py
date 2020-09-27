@@ -1,3 +1,4 @@
+import re
 import random
 import html.parser
 from gi.repository import Gtk
@@ -184,10 +185,32 @@ class ChannelDialog(Gtk.Dialog):
             'channel_type': self._channel_type_combo.get_active()
         }
 
+    def _auto_populate_form(self):
+        '''Wykrywa specjalne ciągi znaków w polu tytułu i na ich podstawie automatycznie uzupełnia wszystkie pola formularza'''
+        url = self._rss_title_entry.get_text()
+        channel_type = self._channel_type_combo.get_active_text()
+
+        # link do kanału youtube
+        m = re.match(r'^https:\/\/www\.youtube\.com\/channel\/([a-zA-Z0-9_\-]+)$', url)
+        if m is not None and channel_type == 'RssChannel':
+            channel_id = m.group(1)
+            self._rss_url_entry.set_text(f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}')
+            self._rss_title_entry.set_text(channel_id)
+            return True
+
+        # link do usera youtube
+        m = re.match(r'^https:\/\/www\.youtube\.com\/user\/([a-zA-Z0-9_\-]+)$', url)
+        if m is not None and channel_type == 'RssChannel':
+            user_id = m.group(1)
+            self._rss_url_entry.set_text(f'https://www.youtube.com/feeds/videos.xml?user={user_id}')
+            self._rss_title_entry.set_text(user_id)
+            return True
+
     def _on_rss_url_entry(self, e):
         self.response(Gtk.ResponseType.OK)
 
     def _on_validate(self, event=None):
+        self._auto_populate_form()
         b = all([
             self._rss_title_entry.get_text(),
             self._rss_url_entry.get_text()
