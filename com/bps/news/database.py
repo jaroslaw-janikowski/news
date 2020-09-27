@@ -25,7 +25,7 @@ class Database:
         return title.replace('\n', ' ')
 
     def get_channels(self):
-        return self._cursor.execute('select channel.id, channel.title, channel.url, channel.channel_type, (select count(id) from news where channel_id = channel.id and is_read = 0) as unread_count, folder.title as folder_title from channel left join folder on folder.id = channel.folder_id').fetchall()
+        return self._cursor.execute('select channel.id, channel.title, channel.url, channel.channel_type, (select count(id) from news where channel_id = channel.id and is_read = 0) as unread_count, folder.title as folder_title from channel left join folder on folder.id = channel.folder_id order by channel.title').fetchall()
 
     def add_channel(self, title, url, channel_type):
         self._cursor.execute('insert into channel(title, url, channel_type) values (?, ?, ?)', (title, url, channel_type))
@@ -170,7 +170,7 @@ class Database:
             os.remove(filename)
 
     def get_folders(self):
-        return self._cursor.execute('select title, expanded from folder').fetchall()
+        return self._cursor.execute('select title, expanded from folder order by title').fetchall()
 
     def add_folder(self, title):
         self._cursor.execute('insert into folder(title) values(?)', (title,))
