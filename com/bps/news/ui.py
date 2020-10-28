@@ -279,11 +279,18 @@ class ChannelViewer(Gtk.ScrolledWindow):
             Gdk.DragAction.DEFAULT | Gdk.DragAction.MOVE
         )
 
+        self._selected_channel = None
+
         self.show_all()
 
     def _on_row_expanded(self, treeview, iter_, path):
         if callable(self._on_folder_toggle):
             self._on_folder_toggle(True, self._tree_store.get_value(iter_, 0))
+
+            # przywróć zaznaczenie jeśli trzeba
+            if self._selected_channel is not None:
+                self._tree_view.get_selection().select_iter(self._selected_channel.iter)
+                self._tree_view.scroll_to_cell(self._selected_channel.path, None, True, 0.5, 0.5)
 
     def _on_row_collapsed(self, treeview, iter_, path):
         if callable(self._on_folder_toggle):
@@ -446,6 +453,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
         self._tree_view.get_selection().select_iter(row.iter)
         self._tree_view.scroll_to_cell(row.path, None, True, 0.5, 0.5)
+        self._selected_channel = row
 
     def select_next_channel(self):
         '''Zaznacza następny kanał który posiada nieprzeczytane newsy'''
@@ -472,8 +480,14 @@ class ChannelViewer(Gtk.ScrolledWindow):
             return False
 
         channel_name = row[0]
+
+        # usuń stare zaznaczenie przed nowym
+        # zaznaczeniem tak na wszelki wypadek
+        self._tree_view.get_selection().unselect_all()
+
         self._tree_view.get_selection().select_iter(row.iter)
         self._tree_view.scroll_to_cell(row.path, None, True, 0.5, 0.5)
+        self._selected_channel = row
         return channel_name
 
     def _on_channel_tree_button_press(self, tree_view, event):
