@@ -314,19 +314,28 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
         source_iter = self._tree_store.get_iter(channel_path)
         dest_path = self._tree_view.get_dest_row_at_pos(x, y)
+        dest_iter = None
         if dest_path is not None:
             dest_path, drop_pos = dest_path
 
-        # nie pozwól na dodanie kanału do innego kanału
-        if dest_path.get_depth() > 1:
-            dest_path.up()
+            # nie pozwól na dodanie kanału do innego kanału
+            if dest_path and dest_path.get_depth() > 1:
+                dest_path.up()
 
-        dest_iter = self._tree_store.get_iter(dest_path)
+            dest_iter = self._tree_store.get_iter(dest_path)
+
+            # dest_path musi wskazywać na katalog
+            # to usuwa możliwość doawania kanału do kanału w katalogu root
+            if self._tree_store.get_value(dest_iter, 2) != 0:
+                dest_path = None
+                dest_iter = None
 
         # ustal przenoszone wartości
         channel_title = self._tree_store.get_value(source_iter, 0)
         unread_count = self._tree_store.get_value(source_iter, 1)
-        folder_title = self._tree_store.get_value(dest_iter, 0)
+        folder_title = ''
+        if dest_iter is not None:
+            folder_title = self._tree_store.get_value(dest_iter, 0)
 
         # zmniejsz ilość nieprzeczytanych w folderze z którego zabrałeś kanał
         if folder_path is not None:
@@ -342,10 +351,12 @@ class ChannelViewer(Gtk.ScrolledWindow):
         new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
 
         # odśwież ilość nieprzeczytanych w folderze do którego wrzuciłeś ciągnięty kanał
-        self._folder_update_unread(dest_iter)
+        if dest_iter is not None:
+            self._folder_update_unread(dest_iter)
 
         # zaznacz przeniesiony kanał
-        self._tree_view.expand_row(dest_path, True)
+        if dest_path is not None:
+            self._tree_view.expand_row(dest_path, True)
         self._tree_view.get_selection().select_iter(new_channel_iter)
 
         # wykonaj inne, być może potrzebne, operacje
