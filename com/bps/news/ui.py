@@ -313,7 +313,14 @@ class ChannelViewer(Gtk.ScrolledWindow):
             folder_path = s[0]
 
         source_iter = self._tree_store.get_iter(channel_path)
-        dest_path, drop_pos = self._tree_view.get_dest_row_at_pos(x, y)
+        dest_path = self._tree_view.get_dest_row_at_pos(x, y)
+        if dest_path is not None:
+            dest_path, drop_pos = dest_path
+
+        # nie pozwól na dodanie kanału do innego kanału
+        if dest_path.get_depth() > 1:
+            dest_path.up()
+
         dest_iter = self._tree_store.get_iter(dest_path)
 
         # ustal przenoszone wartości
