@@ -1,4 +1,5 @@
 import os.path
+import subprocess
 import webbrowser
 import gi
 gi.require_version('Gtk', '3.0')
@@ -167,11 +168,13 @@ class App(Gtk.Window):
         if url:
             self.goto(url)
 
-    def _on_news_view(self, url):
-        self.goto(url)
-
-    def goto(self, url):
-        webbrowser.open_new_tab(url)
+    def _on_news_view(self, url, button):
+        if button == 1:
+            webbrowser.open_new_tab(url)
+        elif button == 2:
+            subprocess.Popen(['streamlink', url, 'worst', '-p', 'mplayer'])
+        elif button == 3:
+            subprocess.Popen(['streamlink', url, '360p', '-p', 'mplayer'])
 
     def _on_note_activated(self, news_id):
         news = self._db.get_news_from_id(news_id)

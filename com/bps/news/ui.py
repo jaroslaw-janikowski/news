@@ -90,6 +90,7 @@ class NewsViewer(Gtk.Box):
 
         # tytuł
         self._title_label = Gtk.Label('')
+        self._title_label.set_tooltip_text('1 - przeglądarka\n2 - streamlink worst\n3 - streamlink 360p')
         self._title_label.set_line_wrap(True)
         self._title_label.set_halign(Gtk.Align.START)
         self._title_label.set_margin_start(5)
@@ -132,7 +133,7 @@ class NewsViewer(Gtk.Box):
 
     def _on_url_click(self, w, event):
         if callable(self._on_title_click):
-            self._on_title_click(self._url)
+            self._on_title_click(self._url, event.button)
 
 
 class ChannelDialog(Gtk.Dialog):
