@@ -95,6 +95,18 @@ class App(Gtk.Window):
         news_goto_item.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
         news_menu.append(news_goto_item)
 
+        news_streamlink_worst = Gtk.MenuItem('Streamlink worst')
+        news_streamlink_worst.connect('activate', self._on_news_streamlink_worst)
+        key, mod = Gtk.accelerator_parse('1')
+        news_streamlink_worst.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
+        news_menu.append(news_streamlink_worst)
+
+        news_streamlink_360p = Gtk.MenuItem('Streamlink 360p')
+        news_streamlink_360p.connect('activate', self._on_news_streamlink_360p)
+        key, mod = Gtk.accelerator_parse('2')
+        news_streamlink_360p.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
+        news_menu.append(news_streamlink_360p)
+
         # help menu
         help_menu_item = Gtk.MenuItem('Help')
         help_menu = Gtk.Menu()
@@ -142,6 +154,16 @@ class App(Gtk.Window):
 
         self.show_all()
 
+    def _on_news_streamlink_worst(self, e):
+        url = self._news_viewer.get_url()
+        if url:
+            self.goto(url, 2)
+
+    def _on_news_streamlink_360p(self, e):
+        url = self._news_viewer.get_url()
+        if url:
+            self.goto(url, 2)
+
     def _on_progress_cancel(self):
         self._updater.cancel()
 
@@ -169,6 +191,9 @@ class App(Gtk.Window):
             self.goto(url)
 
     def _on_news_view(self, url, button):
+        self.goto(url, button)
+
+    def goto(self, url, button=1):
         if button == 1:
             webbrowser.open_new_tab(url)
         elif button == 2:
