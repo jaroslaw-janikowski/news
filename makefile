@@ -19,6 +19,7 @@ install: uninstall
 
 	cp ./res/icons/folder.png /usr/share/icons/news/folder.png
 	cp ./res/icons/rss.png /usr/share/icons/news/rss.png
+	cp ./res/icons/youtube.png /usr/share/icons/news/youtube.png
 
 	cp ./main.py /usr/bin/news
 

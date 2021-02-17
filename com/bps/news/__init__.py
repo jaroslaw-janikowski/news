@@ -146,7 +146,12 @@ class App(Gtk.Window):
             self._channel_viewer.add_folder(folder['title'])
 
         for id, title, url, channel_type, unread_count, folder_title in self._db.get_channels():
-            self._channel_viewer.add_channel(title, unread_count, folder_title)
+            # wybierz ikonę odpowiednią do źródła newsów
+            icon = 'rss'
+            if 'youtube' in url:
+                icon = 'youtube'
+
+            self._channel_viewer.add_channel(title, unread_count, folder_title, icon_name=icon)
 
         # rozwin katalogi jeśli trzeba
         for folder in folders:
@@ -272,7 +277,11 @@ class App(Gtk.Window):
             data = dlg.get_data()
             if data:
                 if self._db.add_channel(data['title'], data['url'], data['channel_type']):
-                    self._channel_viewer.add_channel(data['title'], 0)
+                    icon = 'rss'
+                    if 'youtube' in data['url']:
+                        icon = 'youtube'
+
+                    self._channel_viewer.add_channel(data['title'], 0, icon_name=icon)
 
         dlg.destroy()
 

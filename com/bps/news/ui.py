@@ -334,6 +334,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
         # ustal przenoszone wartości
         channel_title = self._tree_store.get_value(source_iter, 0)
         unread_count = self._tree_store.get_value(source_iter, 1)
+        icon = self._tree_store.get_value(source_iter, 3)
         folder_title = ''
         if dest_iter is not None:
             folder_title = self._tree_store.get_value(dest_iter, 0)
@@ -349,7 +350,7 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
         # przenieś element poprzez zrobienie kopii i usunięcie starego
         self._tree_store.remove(source_iter)
-        new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
+        new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, icon))
 
         # odśwież ilość nieprzeczytanych w folderze do którego wrzuciłeś ciągnięty kanał
         if dest_iter is not None:
@@ -404,13 +405,15 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
         self._tree_store.set_value(folder_iter, 1, news_count)
 
-    def add_channel(self, channel_title, unread_count, folder_title=None):
+    def add_channel(self, channel_title, unread_count, folder_title=None, icon_name='rss'):
         folder_iter = self._get_folder_iter(folder_title)
-        self._tree_store.append(folder_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
+        channel_iter = self._tree_store.append(folder_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons[icon_name]))
 
         # jeśli kanał dodano do folderu to uaktualnij liczbę nieprzeczytanych w tym folderze
         if folder_iter is not None:
             self._folder_update_unread(folder_iter)
+
+        return channel_iter
 
     def get_selected_title(self):
         model, iter_ = self._tree_view.get_selection().get_selected()
