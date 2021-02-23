@@ -1,6 +1,7 @@
 import os
 import os.path
 import sqlite3
+import collections
 
 
 class Database:
@@ -93,16 +94,61 @@ class Database:
             where
                 channel.title = ?
                 and is_read  = 0
-        '''
+            order by quality desc'''
 
         # czy ma być losowy?
         if random:
-            sql += ' order by random() '
+            sql += ', random() '
 
         # powinien być tylko jeden
         sql += ' limit 1'
 
         return self._cursor.execute(sql, (channel_name,)).fetchone()
+
+    def recommend_count_words(self, text):
+        # usuń znaki specjalne
+        spec = '~!@#$%^&*()_+{}:"|<>?`-=[];\'\\,./'
+        for spec_char in spec:
+            text = text.replace(spec_char, '')
+
+        # usuń słowa 3 znakowe lub krótsze
+        text = text.split()
+        text = [word for word in text if len(word) > 3]
+
+        # policz słowa
+        c = collections.Counter(text)
+        return c.most_common()
+
+    def recommend_update_words(self, words_count):
+        # aktualizuj tabelę words
+        for word, count in words_count:
+            sql = 'insert into words(word, weight) values(?, ?) on conflict(word) do update set weight = weight + ? where word = ?'
+            self._cursor.execute(sql, (word, count, count, word))
+
+    def recommend_update_quality_all(self):
+        '''Aktualizuje pole quality dla wszystkich nie przeczytanych newsów'''
+        sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0"
+        q = self._cursor.execute(sql)
+        for row in q:
+            words = [f'"{i}"' for i, c in self.recommend_count_words(row['text'])]
+            words_list = f'({",".join(words)})'
+            new_quality = self._cursor.execute(f'select sum(weight) from words where word in {words_list}').fetchone()[0]
+            if new_quality is not None:
+                self._cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
+
+    def recommend_update_quality(self, word):
+        # znajdź wszystkie nie przejrzane zawierajace słowo
+        sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0 and (channel.title || ' ' || news.title || ' ' || summary) like ?"
+        q = self._cursor.execute(sql, (f'%{word}%',))
+        for row in q:
+            words = [f'"{i}"' for i, c in self.recommend_count_words(row['text'])]
+            words_list = f'({",".join(words)})'
+            new_quality = self._cursor.execute(f'select sum(weight) from words where word in {words_list}').fetchone()[0]
+            if new_quality is not None:
+                self._cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
+
+    def commit(self):
+        self._connection.commit()
 
     def get_news_count(self):
         return self._cursor.execute('''

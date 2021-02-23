@@ -83,10 +83,14 @@ class NewsParser(html.parser.HTMLParser):
 
 
 class NewsViewer(Gtk.Box):
-    def __init__(self, on_click=None):
+    def __init__(self, on_click=None, on_like=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._on_title_click = on_click
+        self._on_like_btn_click = on_like
         self._link_cursor = Gdk.Cursor(Gdk.CursorType.HAND1)
+
+        # pasek narzędzi
+        vbox = Gtk.HBox()
 
         # tytuł
         self._title_label = Gtk.Label('')
@@ -98,7 +102,14 @@ class NewsViewer(Gtk.Box):
         self._title_label.set_events(Gdk.EventMask.BUTTON_PRESS_MASK)
         self._title_label.connect('button-press-event', self._on_url_click)
         self._title_label.connect('realize', self._on_label_realize)
-        self.pack_start(self._title_label, False, False, 5)
+        vbox.pack_start(self._title_label, False, False, 0)
+
+        # ikona "lubię to"
+        thumbs_up_btn = Gtk.Button('like')
+        thumbs_up_btn.connect('clicked', self._on_like_click)
+        vbox.pack_end(thumbs_up_btn, False, False, 0)
+
+        self.pack_start(vbox, False, False, 2)
 
         # url
         self._url = None
@@ -115,6 +126,12 @@ class NewsViewer(Gtk.Box):
         self._text_view.set_margin_start(5)
         scrolledWindow.add(self._text_view)
         self.pack_start(scrolledWindow, True, True, 5)
+
+    def _on_like_click(self, e):
+        if callable(self._on_like_btn_click):
+            news_title = self._title_label.get_text()
+            news_content = self._text_buffer.get_text(self._text_buffer.get_start_iter(), self._text_buffer.get_end_iter(), False)
+            self._on_like_btn_click(news_title, news_content)
 
     def _on_label_realize(self, widget):
         self._title_label.get_window().set_cursor(self._link_cursor)
@@ -283,6 +300,9 @@ class ChannelViewer(Gtk.ScrolledWindow):
         self._selected_channel = None
 
         self.show_all()
+
+    def get_selected_channel(self):
+        return self._selected_channel
 
     def _on_row_expanded(self, treeview, iter_, path):
         if callable(self._on_folder_toggle):

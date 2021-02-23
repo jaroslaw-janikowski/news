@@ -134,7 +134,7 @@ class App(Gtk.Window):
         self._news_list_box = com.bps.news.ui.NewsListView(self._on_note_activated)
         l_paned.pack1(self._news_list_box, False, False)
 
-        self._news_viewer = com.bps.news.ui.NewsViewer(self._on_news_view)
+        self._news_viewer = com.bps.news.ui.NewsViewer(on_click=self._on_news_view, on_like=self._on_like_click)
         l_paned.pack2(self._news_viewer, True, False)
         paned.pack2(l_paned, True, False)
 
@@ -158,6 +158,16 @@ class App(Gtk.Window):
             self._channel_viewer.toggle_folder(folder['title'], folder['expanded'])
 
         self.show_all()
+
+    def _on_like_click(self, news_title, news_content):
+        news_channel = self._channel_viewer.get_selected_channel()[0]
+        text = f'{news_channel} {news_title} {news_content}'.lower()
+
+        r = self._db.recommend_count_words(text)
+        self._db.recommend_update_words(r)
+        for word, count in r:
+            self._db.recommend_update_quality(word)
+        self._db.commit()
 
     def _on_news_streamlink_worst(self, e):
         url = self._news_viewer.get_url()
@@ -300,6 +310,8 @@ class App(Gtk.Window):
     def _on_update_end(self):
         self._update_unread_count()
         self._update_all_item.set_sensitive(True)
+        self._db.recommend_update_quality_all()
+        self._db.commit()
 
         # avoid crash
         GObject.idle_add(lambda: self._progress_dialog.destroy())
