@@ -177,7 +177,7 @@ class App(Gtk.Window):
     def _on_news_streamlink_360p(self, e):
         url = self._news_viewer.get_url()
         if url:
-            self.goto(url, 2)
+            self.goto(url, 3)
 
     def _on_progress_cancel(self):
         self._updater.cancel()
