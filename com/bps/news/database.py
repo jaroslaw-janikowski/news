@@ -69,7 +69,7 @@ class Database:
         # insert
         try:
             self._cursor.execute(insert_sql, [d for sublist in insert_values for d in sublist])
-            self._connection.commit()
+            # self._connection.commit()
         except sqlite3.OperationalError:
             pass
 
