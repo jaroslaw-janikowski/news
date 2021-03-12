@@ -84,11 +84,12 @@ class Updater(threading.Thread):
 
             finally:
                 channel_index += 1
-
-        self._db.commit()
+                self._db.recommend_update_quality_all()
+                self._db.commit()
         if callable(self._on_update_end):
             GObject.idle_add(self._on_update_end)
 
     def cancel(self):
+        self._db.recommend_update_quality_all()
         self._db.commit()
         self._do_stop = True

@@ -135,7 +135,7 @@ class Database:
         '''Aktualizuje pole quality dla wszystkich nie przeczytanych newsów'''
         sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0"
         q = self._cursor.execute(sql)
-        for row in q:
+        for row in q.fetchall():
             words = [f'"{i}"' for i, c in self.recommend_count_words(row['text'])]
             words_list = f'({",".join(words)})'
             new_quality = self._cursor.execute(f'select sum(weight) from words where word in {words_list}').fetchone()[0]
