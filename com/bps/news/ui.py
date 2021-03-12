@@ -105,9 +105,9 @@ class NewsViewer(Gtk.Box):
         vbox.pack_start(self._title_label, False, False, 0)
 
         # ikona "lubię to"
-        thumbs_up_btn = Gtk.Button('like')
-        thumbs_up_btn.connect('clicked', self._on_like_click)
-        vbox.pack_end(thumbs_up_btn, False, False, 0)
+        self._thumbs_up_btn = Gtk.Button('like')
+        self._thumbs_up_btn.connect('clicked', self._on_like_click)
+        vbox.pack_end(self._thumbs_up_btn, False, False, 0)
 
         self.pack_start(vbox, False, False, 2)
 
@@ -127,6 +127,9 @@ class NewsViewer(Gtk.Box):
         scrolledWindow.add(self._text_view)
         self.pack_start(scrolledWindow, True, True, 5)
 
+    def set_news_quality(self, q):
+        self._thumbs_up_btn.set_label(f'Like - {q}')
+
     def _on_like_click(self, e):
         if callable(self._on_like_btn_click):
             news_title = self._title_label.get_text()
@@ -136,9 +139,10 @@ class NewsViewer(Gtk.Box):
     def _on_label_realize(self, widget):
         self._title_label.get_window().set_cursor(self._link_cursor)
 
-    def set_news(self, title, url, content):
+    def set_news(self, title, url, content, quality=0):
         self._title_label.set_text(title.strip())
         self._url = url
+        self.set_news_quality(quality)
 
         # parsuj HTML
         parser = NewsParser()

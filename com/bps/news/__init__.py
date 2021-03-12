@@ -229,7 +229,7 @@ class App(Gtk.Window):
 
     def _on_note_activated(self, news_id):
         news = self._db.get_news_from_id(news_id)
-        self._news_viewer.set_news(news['title'], news['url'], news['summary'])
+        self._news_viewer.set_news(news['title'], news['url'], news['summary'], news['quality'])
 
     def _on_news_next_item(self, e):
         # zaznacz losowy kanał posiadający nieprzeczytane posty
@@ -256,7 +256,7 @@ class App(Gtk.Window):
         self._news_list_box.select_news(news['id'])
 
         # ustaw news w przeglądarce newsów
-        self._news_viewer.set_news(news['title'], news['url'], news['summary'])
+        self._news_viewer.set_news(news['title'], news['url'], news['summary'], news['quality'])
 
         # oznacz notatkę jako przeczytaną
         self._db.set_news_as_read(news['id'])
