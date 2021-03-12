@@ -144,7 +144,7 @@ class Database:
 
     def recommend_update_quality(self, word):
         # znajdź wszystkie nie przejrzane zawierajace słowo
-        sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0 and (channel.title || ' ' || news.title || ' ' || summary) like ?"
+        sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0 and (channel.title || ' ' || news.title || ' ' || summary) like ? collate nocase"
         q = self._cursor.execute(sql, (f'%{word}%',))
         for row in q:
             words = [f'"{i}"' for i, c in self.recommend_count_words(row['text'])]
