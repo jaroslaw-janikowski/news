@@ -160,6 +160,10 @@ class Database:
             group by channel.title
         ''').fetchall()
 
+    def set_all_as_read(self):
+        self._cursor.execute('update news set is_read = 1 where is_read = 0')
+        self._connection.commit()
+
     def set_news_as_read(self, note_id):
         self._cursor.execute('update news set is_read = 1 where id = ?', (note_id,))
         self._connection.commit()

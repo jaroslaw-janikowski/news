@@ -107,6 +107,12 @@ class App(Gtk.Window):
         news_streamlink_360p.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
         news_menu.append(news_streamlink_360p)
 
+        news_mark_read_all = Gtk.MenuItem('Mark all as read')
+        news_mark_read_all.connect('activate', self._on_mark_all_read)
+        key, mod = Gtk.accelerator_parse('<Control>M')
+        news_mark_read_all.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
+        news_menu.append(news_mark_read_all)
+
         # help menu
         help_menu_item = Gtk.MenuItem('Help')
         help_menu = Gtk.Menu()
@@ -158,6 +164,11 @@ class App(Gtk.Window):
             self._channel_viewer.toggle_folder(folder['title'], folder['expanded'])
 
         self.show_all()
+
+    def _on_mark_all_read(self, e):
+        self._db.set_all_as_read()
+        self._news_list_box.clear_news()
+        self._channel_viewer.clear_news_count()
 
     def _on_like_click(self, news_title, news_content):
         news_channel = self._channel_viewer.get_selected_channel()[0]
