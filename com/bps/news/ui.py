@@ -491,19 +491,29 @@ class ChannelViewer(Gtk.ScrolledWindow):
                 self._folder_update_unread(folder_iter)
 
     def select_channel(self, channel_title):
-        # zaznacz kanał w drzewie kanałów
-        channel_iter = None
+        channel = None
+
+        # wyszukaj wśród kanałów bez folderów
         for row in self._tree_store:
-            if row[0] == channel_title:
-                channel_iter = row.iter
+            # kanały poza folderami
+            if row[2] == self.ITEM_TYPE_CHANNEL and row[0] == channel_title:
+                channel = row
                 break
 
-        if channel_iter is None:
+            # wyszukaj w kanałach wewnątrz folderów
+            elif row[2] == self.ITEM_TYPE_FOLDER:
+                for i in row.iterchildren():
+                    if i[0] == channel_title:
+                        channel = i
+                        break
+
+        if channel is None:
             return False
 
-        self._tree_view.get_selection().select_iter(row.iter)
-        self._tree_view.scroll_to_cell(row.path, None, True, 0.5, 0.5)
-        self._selected_channel = row
+        self._tree_view.get_selection().select_iter(channel.iter)
+        self._tree_view.scroll_to_cell(channel.path, None, True, 0.5, 0.5)
+        self._selected_channel = channel
+        return channel[0]
 
     def select_next_channel(self):
         '''Zaznacza następny kanał który posiada nieprzeczytane newsy'''

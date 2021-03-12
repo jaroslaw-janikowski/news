@@ -232,17 +232,14 @@ class App(Gtk.Window):
         self._news_viewer.set_news(news['title'], news['url'], news['summary'], news['quality'])
 
     def _on_news_next_item(self, e):
-        # zaznacz losowy kanał posiadający nieprzeczytane posty
-        channel_name = self._channel_viewer.select_next_channel()
-        if not channel_name:
+        # wylosuj news o największej jakości
+        news = self._db.get_news_next(None, random=False)
+        if news is None:
             return False
 
-        # znajdź następny news w tym kanale
-        news = self._db.get_news_next(channel_name, random=True)
-        if news is None:
-            # nie ma następnego newsa, zaznacz inny kanał
-            # który ma jeszcze nie przeczytane newsy
-            # self._on_news_next_item(e)
+        # zaznacz kanał do jakiego należy ten news
+        channel_name = self._channel_viewer.select_channel(news['channel_title'])
+        if not channel_name:
             return False
 
         # ustaw newsy na liście newsów dla kanalu

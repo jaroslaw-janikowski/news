@@ -86,15 +86,21 @@ class Database:
     def get_news_from_id(self, news_id):
         return self._cursor.execute('select * from news where id = ?', (news_id,)).fetchone()
 
-    def get_news_next(self, channel_name, random=False):
+    def get_news_next(self, channel_name=None, random=False):
+        params = []
+
         sql = '''
-            select news.*
+            select news.*, channel.title as channel_title
             from news
-            left join channel on channel.id = news.channel_id
-            where
-                channel.title = ?
-                and is_read  = 0
-            order by quality desc'''
+            inner join channel on channel.id = news.channel_id
+            where is_read  = 0'''
+
+        # czy brać pod uwagę wszystkie kanały czy jeden wybrany
+        if channel_name:
+            sql += ' and channel.title = ?'
+            params.append(channel_name)
+
+        sql += ' order by quality desc'
 
         # czy ma być losowy?
         if random:
@@ -103,7 +109,7 @@ class Database:
         # powinien być tylko jeden
         sql += ' limit 1'
 
-        return self._cursor.execute(sql, (channel_name,)).fetchone()
+        return self._cursor.execute(sql, params).fetchone()
 
     def recommend_count_words(self, text):
         # usuń znaki specjalne
