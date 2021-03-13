@@ -460,8 +460,8 @@ class ChannelViewer(Gtk.ScrolledWindow):
         return None
 
     def clear_news_count(self):
-        for iter_ in self._tree_store:
-            self._tree_store.set_value(iter_, 1, 0)
+        for row in self._tree_store:
+            self._tree_store.set_value(row.iter, 1, 0)
 
     def dec_unread_count(self, channel_title):
         iter_ = self._tree_store.get_iter_first()
