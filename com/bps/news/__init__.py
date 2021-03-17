@@ -223,9 +223,9 @@ class App(Gtk.Window):
         if button == 1:
             webbrowser.open_new_tab(url)
         elif button == 2:
-            subprocess.Popen(['streamlink', url, 'worst', '-p', 'mplayer'])
+            subprocess.Popen(['streamlink', url, 'worst', '-p', 'mpv'])
         elif button == 3:
-            subprocess.Popen(['streamlink', url, '360p', '-p', 'mplayer'])
+            subprocess.Popen(['streamlink', url, '360p', '-p', 'mpv'])
 
     def _on_note_activated(self, news_id):
         news = self._db.get_news_from_id(news_id)
