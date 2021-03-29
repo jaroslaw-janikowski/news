@@ -165,6 +165,9 @@ class App(Gtk.Window):
 
         self.show_all()
 
+        # załadowanie konfiguracji i styli
+        self._load_config()
+
     def _on_mark_all_read(self, e):
         self._db.set_all_as_read()
         self._news_list_box.clear_news()
@@ -334,6 +337,11 @@ class App(Gtk.Window):
 
     def _on_destroy(self, e=None):
         self._quit()
+
+    def _load_config(self):
+        css_provider = Gtk.CssProvider.new()
+        css_provider.load_from_data(b'* { font-size: 14pt; }')
+        Gtk.StyleContext.add_provider_for_screen(self.get_window().get_screen(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
     def _quit(self):
         Gtk.main_quit()
