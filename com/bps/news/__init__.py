@@ -156,6 +156,8 @@ class App(Gtk.Window):
             icon = 'rss'
             if 'youtube' in url:
                 icon = 'youtube'
+            elif 'twitch' in url:
+                icon = 'twitch'
 
             self._channel_viewer.add_channel(title, unread_count, folder_title, icon_name=icon)
 
@@ -301,6 +303,8 @@ class App(Gtk.Window):
                     icon = 'rss'
                     if 'youtube' in data['url']:
                         icon = 'youtube'
+                    elif 'twitch' in data['url']:
+                        icon = 'twitch'
 
                     self._channel_viewer.add_channel(data['title'], 0, icon_name=icon)
 
