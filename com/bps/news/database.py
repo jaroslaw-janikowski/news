@@ -115,11 +115,11 @@ class Database:
         # usuń znaki specjalne
         spec = '~!@#$%^&*()_+{}:"|<>?`-=[];\'\\,./'
         for spec_char in spec:
-            text = text.replace(spec_char, '')
+            text = text.replace(spec_char, ' ')
 
         # usuń słowa 3 znakowe lub krótsze
         text = text.split()
-        text = [word for word in text if len(word) > 3]
+        text = [word.lower() for word in text if len(word) > 3]
 
         # policz słowa
         c = collections.Counter(text)
