@@ -695,3 +695,14 @@ class ProgressDialog(Gtk.Dialog):
 
         # show all controls
         self.show_all()
+
+
+class WaitDialog(Gtk.Dialog):
+    def __init__(self, parent):
+        super().__init__(title='Proszę czekać...', transient_for=parent, destroy_with_parent=True)
+        msg = Gtk.Label()
+        msg.set_text('Operacja w toku, proszę czekać...')
+        self.vbox.pack_start(msg, True, True, 0)
+
+        msg.show()
+        self.hide()

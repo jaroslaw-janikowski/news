@@ -1,3 +1,4 @@
+import errno
 import os.path
 import subprocess
 import webbrowser
@@ -7,7 +8,9 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
 from com.bps.news.resources import resource
+from com.bps.news.viewer import StreamlinkViewer
 import com.bps.news.ui
+from com.bps.news.ui import WaitDialog
 import com.bps.news
 import com.bps.news.database
 import com.bps.news.updater
@@ -20,6 +23,8 @@ class App(Gtk.Window):
         self.set_title('News')
         self._progress_dialog = None
         self.connect('destroy', self._on_destroy)
+
+        self._wait_dlg = WaitDialog(self)
 
         # otworzenie / utworzenie pliku bazy danych
         database_file = os.path.join(
@@ -188,12 +193,12 @@ class App(Gtk.Window):
     def _on_news_streamlink_worst(self, e):
         url = self._news_viewer.get_url()
         if url:
-            self.goto(url, 2)
+            self._run_in_streamlink(url, 'worst')
 
     def _on_news_streamlink_360p(self, e):
         url = self._news_viewer.get_url()
         if url:
-            self.goto(url, 3)
+            self._run_in_streamlink(url, '360p')
 
     def _on_progress_cancel(self):
         self._updater.cancel()
@@ -228,9 +233,14 @@ class App(Gtk.Window):
         if button == 1:
             webbrowser.open_new_tab(url)
         elif button == 2:
-            subprocess.Popen(['streamlink', url, 'worst', '-p', 'mpv'])
+            self._run_in_streamlink(url, 'worst')
         elif button == 3:
-            subprocess.Popen(['streamlink', url, '360p', '-p', 'mpv'])
+            self._run_in_streamlink(url, '360p')
+
+    def _run_in_streamlink(self, url, quality='worst'):
+        self._wait_dlg.show()
+        v = StreamlinkViewer(url, quality, on_start=self._wait_dlg.hide)
+        v.start()
 
     def _on_note_activated(self, news_id):
         news = self._db.get_news_from_id(news_id)
