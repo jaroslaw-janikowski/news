@@ -697,12 +697,23 @@ class ProgressDialog(Gtk.Dialog):
         self.show_all()
 
 
-class WaitDialog(Gtk.Dialog):
+class WaitDialog(Gtk.Window):
     def __init__(self, parent):
-        super().__init__(title='Proszę czekać...', transient_for=parent, destroy_with_parent=True)
+        super().__init__(type=Gtk.WindowType.TOPLEVEL, title='Proszę czekać...')
+        self.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
+        self.set_transient_for(parent)
+        self.set_skip_taskbar_hint(True)
+        self.set_size_request(250, 120)
+
+        self.connect('key_press_event', self._on_key_press)
+
         msg = Gtk.Label()
         msg.set_text('Operacja w toku, proszę czekać...')
-        self.vbox.pack_start(msg, True, True, 0)
+        self.add(msg)
 
-        msg.show()
-        self.hide()
+    def _on_key_press(self, widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            self.hide()
+
+    def show(self):
+        self.show_all()
