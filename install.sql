@@ -27,7 +27,8 @@ create table news(
 create table words(
     id integer primary key autoincrement,
     word varchar(255) not null unique,
-    weight int not null default 0
+    weight int not null default 0,
+    use boolean default 1
 );
 
 -- test data

@@ -138,7 +138,7 @@ class Database:
         for row in q.fetchall():
             words = [f'"{i}"' for i, c in self.recommend_count_words(row['text'])]
             words_list = f'({",".join(words)})'
-            new_quality = self._cursor.execute(f'select sum(weight) from words where word in {words_list}').fetchone()[0]
+            new_quality = self._cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
             if new_quality is not None:
                 self._cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
 
@@ -149,7 +149,7 @@ class Database:
         for row in q:
             words = [f'"{i}"' for i, c in self.recommend_count_words(row['text'])]
             words_list = f'({",".join(words)})'
-            new_quality = self._cursor.execute(f'select sum(weight) from words where word in {words_list}').fetchone()[0]
+            new_quality = self._cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
             if new_quality is not None:
                 self._cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
 
