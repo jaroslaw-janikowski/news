@@ -6,7 +6,7 @@ uninstall:
 	rm -rf /usr/share/icons/news
 
 install: uninstall
-	mkdir -p /usr/lib/python3/dist-packages/com/bps/news
+	mkdir -p /usr/lib/python3/dist-packages/com/bps/news/viewer
 	mkdir -p /usr/share/icons/news
 
 	cp ./com/bps/__init__.py /usr/lib/python3/dist-packages/com/bps/__init__.py
@@ -16,9 +16,12 @@ install: uninstall
 	cp ./com/bps/news/updater.py /usr/lib/python3/dist-packages/com/bps/news/updater.py
 	cp ./com/bps/news/parentalctrl.py /usr/lib/python3/dist-packages/com/bps/news/parentalctrl.py
 	cp ./com/bps/news/resources.py /usr/lib/python3/dist-packages/com/bps/news/resources.py
+	cp ./com/bps/news/viewer/__init__.py /usr/lib/python3/dist-packages/com/bps/news/viewer/__init__.py
 
 	cp ./res/icons/folder.png /usr/share/icons/news/folder.png
 	cp ./res/icons/rss.png /usr/share/icons/news/rss.png
+	cp ./res/icons/youtube.png /usr/share/icons/news/youtube.png
+	cp ./res/icons/twitch.png /usr/share/icons/news/twitch.png
 
 	cp ./main.py /usr/bin/news
 

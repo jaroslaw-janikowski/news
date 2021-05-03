@@ -8,6 +8,8 @@ class ResourceManager:
         self._icons_dir = Path('/usr/share/icons/news')
         self.icons = {
             'rss': self.load_icon('rss.png'),
+            'youtube': self.load_icon('youtube.png'),
+            'twitch': self.load_icon('twitch.png'),
             'folder': self.load_icon('folder.png')
         }
 

@@ -83,13 +83,18 @@ class NewsParser(html.parser.HTMLParser):
 
 
 class NewsViewer(Gtk.Box):
-    def __init__(self, on_click=None):
+    def __init__(self, on_click=None, on_like=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._on_title_click = on_click
+        self._on_like_btn_click = on_like
         self._link_cursor = Gdk.Cursor(Gdk.CursorType.HAND1)
+
+        # pasek narzędzi
+        vbox = Gtk.HBox()
 
         # tytuł
         self._title_label = Gtk.Label('')
+        self._title_label.set_tooltip_text('1 - streamlink worst\n2 - streamlink 360p')
         self._title_label.set_line_wrap(True)
         self._title_label.set_halign(Gtk.Align.START)
         self._title_label.set_margin_start(5)
@@ -97,7 +102,14 @@ class NewsViewer(Gtk.Box):
         self._title_label.set_events(Gdk.EventMask.BUTTON_PRESS_MASK)
         self._title_label.connect('button-press-event', self._on_url_click)
         self._title_label.connect('realize', self._on_label_realize)
-        self.pack_start(self._title_label, False, False, 5)
+        vbox.pack_start(self._title_label, False, False, 0)
+
+        # ikona "lubię to"
+        self._thumbs_up_btn = Gtk.Button('like')
+        self._thumbs_up_btn.connect('clicked', self._on_like_click)
+        vbox.pack_end(self._thumbs_up_btn, False, False, 0)
+
+        self.pack_start(vbox, False, False, 2)
 
         # url
         self._url = None
@@ -115,12 +127,22 @@ class NewsViewer(Gtk.Box):
         scrolledWindow.add(self._text_view)
         self.pack_start(scrolledWindow, True, True, 5)
 
+    def set_news_quality(self, q):
+        self._thumbs_up_btn.set_label(f'Like - {q}')
+
+    def _on_like_click(self, e):
+        if callable(self._on_like_btn_click):
+            news_title = self._title_label.get_text()
+            news_content = self._text_buffer.get_text(self._text_buffer.get_start_iter(), self._text_buffer.get_end_iter(), False)
+            self._on_like_btn_click(news_title, news_content)
+
     def _on_label_realize(self, widget):
         self._title_label.get_window().set_cursor(self._link_cursor)
 
-    def set_news(self, title, url, content):
+    def set_news(self, title, url, content, quality=0):
         self._title_label.set_text(title.strip())
         self._url = url
+        self.set_news_quality(quality)
 
         # parsuj HTML
         parser = NewsParser()
@@ -132,7 +154,7 @@ class NewsViewer(Gtk.Box):
 
     def _on_url_click(self, w, event):
         if callable(self._on_title_click):
-            self._on_title_click(self._url)
+            self._on_title_click(self._url, event.button)
 
 
 class ChannelDialog(Gtk.Dialog):
@@ -279,11 +301,21 @@ class ChannelViewer(Gtk.ScrolledWindow):
             Gdk.DragAction.DEFAULT | Gdk.DragAction.MOVE
         )
 
+        self._selected_channel = None
+
         self.show_all()
+
+    def get_selected_channel(self):
+        return self._selected_channel
 
     def _on_row_expanded(self, treeview, iter_, path):
         if callable(self._on_folder_toggle):
             self._on_folder_toggle(True, self._tree_store.get_value(iter_, 0))
+
+            # przywróć zaznaczenie jeśli trzeba
+            if self._selected_channel is not None:
+                self._tree_view.get_selection().select_iter(self._selected_channel.iter)
+                self._tree_view.scroll_to_cell(self._selected_channel.path, None, True, 0.5, 0.5)
 
     def _on_row_collapsed(self, treeview, iter_, path):
         if callable(self._on_folder_toggle):
@@ -306,13 +338,30 @@ class ChannelViewer(Gtk.ScrolledWindow):
             folder_path = s[0]
 
         source_iter = self._tree_store.get_iter(channel_path)
-        dest_path, drop_pos = self._tree_view.get_dest_row_at_pos(x, y)
-        dest_iter = self._tree_store.get_iter(dest_path)
+        dest_path = self._tree_view.get_dest_row_at_pos(x, y)
+        dest_iter = None
+        if dest_path is not None:
+            dest_path, drop_pos = dest_path
+
+            # nie pozwól na dodanie kanału do innego kanału
+            if dest_path and dest_path.get_depth() > 1:
+                dest_path.up()
+
+            dest_iter = self._tree_store.get_iter(dest_path)
+
+            # dest_path musi wskazywać na katalog
+            # to usuwa możliwość doawania kanału do kanału w katalogu root
+            if self._tree_store.get_value(dest_iter, 2) != 0:
+                dest_path = None
+                dest_iter = None
 
         # ustal przenoszone wartości
         channel_title = self._tree_store.get_value(source_iter, 0)
         unread_count = self._tree_store.get_value(source_iter, 1)
-        folder_title = self._tree_store.get_value(dest_iter, 0)
+        icon = self._tree_store.get_value(source_iter, 3)
+        folder_title = ''
+        if dest_iter is not None:
+            folder_title = self._tree_store.get_value(dest_iter, 0)
 
         # zmniejsz ilość nieprzeczytanych w folderze z którego zabrałeś kanał
         if folder_path is not None:
@@ -325,13 +374,15 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
         # przenieś element poprzez zrobienie kopii i usunięcie starego
         self._tree_store.remove(source_iter)
-        new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
+        new_channel_iter = self._tree_store.append(dest_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, icon))
 
         # odśwież ilość nieprzeczytanych w folderze do którego wrzuciłeś ciągnięty kanał
-        self._folder_update_unread(dest_iter)
+        if dest_iter is not None:
+            self._folder_update_unread(dest_iter)
 
         # zaznacz przeniesiony kanał
-        self._tree_view.expand_row(dest_path, True)
+        if dest_path is not None:
+            self._tree_view.expand_row(dest_path, True)
         self._tree_view.get_selection().select_iter(new_channel_iter)
 
         # wykonaj inne, być może potrzebne, operacje
@@ -378,13 +429,15 @@ class ChannelViewer(Gtk.ScrolledWindow):
 
         self._tree_store.set_value(folder_iter, 1, news_count)
 
-    def add_channel(self, channel_title, unread_count, folder_title=None):
+    def add_channel(self, channel_title, unread_count, folder_title=None, icon_name='rss'):
         folder_iter = self._get_folder_iter(folder_title)
-        self._tree_store.append(folder_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons['rss']))
+        channel_iter = self._tree_store.append(folder_iter, (channel_title, unread_count, self.ITEM_TYPE_CHANNEL, resource.icons[icon_name]))
 
         # jeśli kanał dodano do folderu to uaktualnij liczbę nieprzeczytanych w tym folderze
         if folder_iter is not None:
             self._folder_update_unread(folder_iter)
+
+        return channel_iter
 
     def get_selected_title(self):
         model, iter_ = self._tree_view.get_selection().get_selected()
@@ -405,6 +458,10 @@ class ChannelViewer(Gtk.ScrolledWindow):
                     return a
             iter_ = self._tree_store.iter_next(iter_)
         return None
+
+    def clear_news_count(self):
+        for row in self._tree_store:
+            self._tree_store.set_value(row.iter, 1, 0)
 
     def dec_unread_count(self, channel_title):
         iter_ = self._tree_store.get_iter_first()
@@ -434,18 +491,29 @@ class ChannelViewer(Gtk.ScrolledWindow):
                 self._folder_update_unread(folder_iter)
 
     def select_channel(self, channel_title):
-        # zaznacz kanał w drzewie kanałów
-        channel_iter = None
+        channel = None
+
+        # wyszukaj wśród kanałów bez folderów
         for row in self._tree_store:
-            if row[0] == channel_title:
-                channel_iter = row.iter
+            # kanały poza folderami
+            if row[2] == self.ITEM_TYPE_CHANNEL and row[0] == channel_title:
+                channel = row
                 break
 
-        if channel_iter is None:
+            # wyszukaj w kanałach wewnątrz folderów
+            elif row[2] == self.ITEM_TYPE_FOLDER:
+                for i in row.iterchildren():
+                    if i[0] == channel_title:
+                        channel = i
+                        break
+
+        if channel is None:
             return False
 
-        self._tree_view.get_selection().select_iter(row.iter)
-        self._tree_view.scroll_to_cell(row.path, None, True, 0.5, 0.5)
+        self._tree_view.get_selection().select_iter(channel.iter)
+        self._tree_view.scroll_to_cell(channel.path, None, True, 0.5, 0.5)
+        self._selected_channel = channel
+        return channel[0]
 
     def select_next_channel(self):
         '''Zaznacza następny kanał który posiada nieprzeczytane newsy'''
@@ -472,8 +540,14 @@ class ChannelViewer(Gtk.ScrolledWindow):
             return False
 
         channel_name = row[0]
+
+        # usuń stare zaznaczenie przed nowym
+        # zaznaczeniem tak na wszelki wypadek
+        self._tree_view.get_selection().unselect_all()
+
         self._tree_view.get_selection().select_iter(row.iter)
         self._tree_view.scroll_to_cell(row.path, None, True, 0.5, 0.5)
+        self._selected_channel = row
         return channel_name
 
     def _on_channel_tree_button_press(self, tree_view, event):
@@ -620,4 +694,26 @@ class ProgressDialog(Gtk.Dialog):
         self.set_position(0.01)
 
         # show all controls
+        self.show_all()
+
+
+class WaitDialog(Gtk.Window):
+    def __init__(self, parent):
+        super().__init__(type=Gtk.WindowType.TOPLEVEL, title='Proszę czekać...')
+        self.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
+        self.set_transient_for(parent)
+        self.set_skip_taskbar_hint(True)
+        self.set_size_request(250, 120)
+
+        self.connect('key_press_event', self._on_key_press)
+
+        msg = Gtk.Label()
+        msg.set_text('Operacja w toku, proszę czekać...')
+        self.add(msg)
+
+    def _on_key_press(self, widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            self.hide()
+
+    def show(self):
         self.show_all()

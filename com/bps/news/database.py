@@ -1,6 +1,7 @@
 import os
 import os.path
 import sqlite3
+import collections
 
 
 class Database:
@@ -25,7 +26,7 @@ class Database:
         return title.replace('\n', ' ')
 
     def get_channels(self):
-        return self._cursor.execute('select channel.id, channel.title, channel.url, channel.channel_type, (select count(id) from news where channel_id = channel.id and is_read = 0) as unread_count, folder.title as folder_title from channel left join folder on folder.id = channel.folder_id').fetchall()
+        return self._cursor.execute('select channel.id, channel.title, channel.url, channel.channel_type, (select count(id) from news where channel_id = channel.id and is_read = 0) as unread_count, folder.title as folder_title from channel left join folder on folder.id = channel.folder_id order by channel.title').fetchall()
 
     def add_channel(self, title, url, channel_type):
         self._cursor.execute('insert into channel(title, url, channel_type) values (?, ?, ?)', (title, url, channel_type))
@@ -68,7 +69,7 @@ class Database:
         # insert
         try:
             self._cursor.execute(insert_sql, [d for sublist in insert_values for d in sublist])
-            self._connection.commit()
+            # self._connection.commit()
         except sqlite3.OperationalError:
             pass
 
@@ -85,24 +86,75 @@ class Database:
     def get_news_from_id(self, news_id):
         return self._cursor.execute('select * from news where id = ?', (news_id,)).fetchone()
 
-    def get_news_next(self, channel_name, random=False):
+    def get_news_next(self, channel_name=None, random=False):
+        params = []
+
         sql = '''
-            select news.*
+            select news.*, channel.title as channel_title
             from news
-            left join channel on channel.id = news.channel_id
-            where
-                channel.title = ?
-                and is_read  = 0
-        '''
+            inner join channel on channel.id = news.channel_id
+            where is_read  = 0'''
+
+        # czy brać pod uwagę wszystkie kanały czy jeden wybrany
+        if channel_name:
+            sql += ' and channel.title = ?'
+            params.append(channel_name)
+
+        sql += ' order by quality desc'
 
         # czy ma być losowy?
         if random:
-            sql += ' order by random() '
+            sql += ', random() '
 
         # powinien być tylko jeden
         sql += ' limit 1'
 
-        return self._cursor.execute(sql, (channel_name,)).fetchone()
+        return self._cursor.execute(sql, params).fetchone()
+
+    def recommend_count_words(self, text):
+        # usuń znaki specjalne
+        spec = '~!@#$%^&*()_+{}:"|<>?`-=[];\'\\,./'
+        for spec_char in spec:
+            text = text.replace(spec_char, ' ')
+
+        # usuń słowa 3 znakowe lub krótsze
+        text = text.split()
+        text = [word.lower() for word in text if len(word) > 3]
+
+        # policz słowa
+        c = collections.Counter(text)
+        return c.most_common()
+
+    def recommend_update_words(self, words_count):
+        # aktualizuj tabelę words
+        for word, count in words_count:
+            sql = 'insert into words(word, weight) values(?, ?) on conflict(word) do update set weight = weight + ? where word = ?'
+            self._cursor.execute(sql, (word, count, count, word))
+
+    def recommend_update_quality_all(self):
+        '''Aktualizuje pole quality dla wszystkich nie przeczytanych newsów'''
+        sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0"
+        q = self._cursor.execute(sql)
+        for row in q.fetchall():
+            words = [f'"{i}"' for i, c in self.recommend_count_words(row['text'])]
+            words_list = f'({",".join(words)})'
+            new_quality = self._cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
+            if new_quality is not None:
+                self._cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
+
+    def recommend_update_quality(self, word):
+        # znajdź wszystkie nie przejrzane zawierajace słowo
+        sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0 and (channel.title || ' ' || news.title || ' ' || summary) like ? collate nocase"
+        q = self._cursor.execute(sql, (f'%{word}%',))
+        for row in q:
+            words = [f'"{i}"' for i, c in self.recommend_count_words(row['text'])]
+            words_list = f'({",".join(words)})'
+            new_quality = self._cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
+            if new_quality is not None:
+                self._cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
+
+    def commit(self):
+        self._connection.commit()
 
     def get_news_count(self):
         return self._cursor.execute('''
@@ -113,6 +165,10 @@ class Database:
                 is_read = 0
             group by channel.title
         ''').fetchall()
+
+    def set_all_as_read(self):
+        self._cursor.execute('update news set is_read = 1 where is_read = 0')
+        self._connection.commit()
 
     def set_news_as_read(self, note_id):
         self._cursor.execute('update news set is_read = 1 where id = ?', (note_id,))
@@ -170,7 +226,7 @@ class Database:
             os.remove(filename)
 
     def get_folders(self):
-        return self._cursor.execute('select title, expanded from folder').fetchall()
+        return self._cursor.execute('select title, expanded from folder order by title').fetchall()
 
     def add_folder(self, title):
         self._cursor.execute('insert into folder(title) values(?)', (title,))

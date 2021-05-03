@@ -1,4 +1,6 @@
+import errno
 import os.path
+import subprocess
 import webbrowser
 import gi
 gi.require_version('Gtk', '3.0')
@@ -6,7 +8,9 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
 from com.bps.news.resources import resource
+from com.bps.news.viewer import StreamlinkViewer
 import com.bps.news.ui
+from com.bps.news.ui import WaitDialog
 import com.bps.news
 import com.bps.news.database
 import com.bps.news.updater
@@ -19,6 +23,8 @@ class App(Gtk.Window):
         self.set_title('News')
         self._progress_dialog = None
         self.connect('destroy', self._on_destroy)
+
+        self._wait_dlg = WaitDialog(self)
 
         # otworzenie / utworzenie pliku bazy danych
         database_file = os.path.join(
@@ -94,6 +100,24 @@ class App(Gtk.Window):
         news_goto_item.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
         news_menu.append(news_goto_item)
 
+        news_streamlink_worst = Gtk.MenuItem('Streamlink worst')
+        news_streamlink_worst.connect('activate', self._on_news_streamlink_worst)
+        key, mod = Gtk.accelerator_parse('1')
+        news_streamlink_worst.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
+        news_menu.append(news_streamlink_worst)
+
+        news_streamlink_360p = Gtk.MenuItem('Streamlink 360p')
+        news_streamlink_360p.connect('activate', self._on_news_streamlink_360p)
+        key, mod = Gtk.accelerator_parse('2')
+        news_streamlink_360p.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
+        news_menu.append(news_streamlink_360p)
+
+        news_mark_read_all = Gtk.MenuItem('Mark all as read')
+        news_mark_read_all.connect('activate', self._on_mark_all_read)
+        key, mod = Gtk.accelerator_parse('<Control>M')
+        news_mark_read_all.add_accelerator('activate', accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
+        news_menu.append(news_mark_read_all)
+
         # help menu
         help_menu_item = Gtk.MenuItem('Help')
         help_menu = Gtk.Menu()
@@ -121,7 +145,7 @@ class App(Gtk.Window):
         self._news_list_box = com.bps.news.ui.NewsListView(self._on_note_activated)
         l_paned.pack1(self._news_list_box, False, False)
 
-        self._news_viewer = com.bps.news.ui.NewsViewer(self._on_news_view)
+        self._news_viewer = com.bps.news.ui.NewsViewer(on_click=self._on_news_view, on_like=self._on_like_click)
         l_paned.pack2(self._news_viewer, True, False)
         paned.pack2(l_paned, True, False)
 
@@ -133,13 +157,48 @@ class App(Gtk.Window):
             self._channel_viewer.add_folder(folder['title'])
 
         for id, title, url, channel_type, unread_count, folder_title in self._db.get_channels():
-            self._channel_viewer.add_channel(title, unread_count, folder_title)
+            # wybierz ikonę odpowiednią do źródła newsów
+            icon = 'rss'
+            if 'youtube' in url:
+                icon = 'youtube'
+            elif 'twitch' in url:
+                icon = 'twitch'
+
+            self._channel_viewer.add_channel(title, unread_count, folder_title, icon_name=icon)
 
         # rozwin katalogi jeśli trzeba
         for folder in folders:
             self._channel_viewer.toggle_folder(folder['title'], folder['expanded'])
 
         self.show_all()
+
+        # załadowanie konfiguracji i styli
+        self._load_config()
+
+    def _on_mark_all_read(self, e):
+        self._db.set_all_as_read()
+        self._news_list_box.clear_news()
+        self._channel_viewer.clear_news_count()
+
+    def _on_like_click(self, news_title, news_content):
+        news_channel = self._channel_viewer.get_selected_channel()[0]
+        text = f'{news_channel} {news_title} {news_content}'.lower()
+
+        r = self._db.recommend_count_words(text)
+        self._db.recommend_update_words(r)
+        for word, count in r:
+            self._db.recommend_update_quality(word)
+        self._db.commit()
+
+    def _on_news_streamlink_worst(self, e):
+        url = self._news_viewer.get_url()
+        if url:
+            self._run_in_streamlink(url, 'worst')
+
+    def _on_news_streamlink_360p(self, e):
+        url = self._news_viewer.get_url()
+        if url:
+            self._run_in_streamlink(url, '360p')
 
     def _on_progress_cancel(self):
         self._updater.cancel()
@@ -167,28 +226,35 @@ class App(Gtk.Window):
         if url:
             self.goto(url)
 
-    def _on_news_view(self, url):
-        self.goto(url)
+    def _on_news_view(self, url, button):
+        self.goto(url, button)
 
-    def goto(self, url):
-        webbrowser.open_new_tab(url)
+    def goto(self, url, button=1):
+        if button == 1:
+            webbrowser.open_new_tab(url)
+        elif button == 2:
+            self._run_in_streamlink(url, 'worst')
+        elif button == 3:
+            self._run_in_streamlink(url, '360p')
+
+    def _run_in_streamlink(self, url, quality='worst'):
+        self._wait_dlg.show()
+        v = StreamlinkViewer(url, quality, on_start=self._wait_dlg.hide)
+        v.start()
 
     def _on_note_activated(self, news_id):
         news = self._db.get_news_from_id(news_id)
-        self._news_viewer.set_news(news['title'], news['url'], news['summary'])
+        self._news_viewer.set_news(news['title'], news['url'], news['summary'], news['quality'])
 
     def _on_news_next_item(self, e):
-        # zaznacz losowy kanał posiadający nieprzeczytane posty
-        channel_name = self._channel_viewer.select_next_channel()
-        if not channel_name:
+        # wylosuj news o największej jakości
+        news = self._db.get_news_next(None, random=False)
+        if news is None:
             return False
 
-        # znajdź następny news w tym kanale
-        news = self._db.get_news_next(channel_name, random=True)
-        if news is None:
-            # nie ma następnego newsa, zaznacz inny kanał
-            # który ma jeszcze nie przeczytane newsy
-            # self._on_news_next_item(e)
+        # zaznacz kanał do jakiego należy ten news
+        channel_name = self._channel_viewer.select_channel(news['channel_title'])
+        if not channel_name:
             return False
 
         # ustaw newsy na liście newsów dla kanalu
@@ -202,7 +268,7 @@ class App(Gtk.Window):
         self._news_list_box.select_news(news['id'])
 
         # ustaw news w przeglądarce newsów
-        self._news_viewer.set_news(news['title'], news['url'], news['summary'])
+        self._news_viewer.set_news(news['title'], news['url'], news['summary'], news['quality'])
 
         # oznacz notatkę jako przeczytaną
         self._db.set_news_as_read(news['id'])
@@ -244,7 +310,13 @@ class App(Gtk.Window):
             data = dlg.get_data()
             if data:
                 if self._db.add_channel(data['title'], data['url'], data['channel_type']):
-                    self._channel_viewer.add_channel(data['title'], 0)
+                    icon = 'rss'
+                    if 'youtube' in data['url']:
+                        icon = 'youtube'
+                    elif 'twitch' in data['url']:
+                        icon = 'twitch'
+
+                    self._channel_viewer.add_channel(data['title'], 0, icon_name=icon)
 
         dlg.destroy()
 
@@ -263,6 +335,8 @@ class App(Gtk.Window):
     def _on_update_end(self):
         self._update_unread_count()
         self._update_all_item.set_sensitive(True)
+        self._db.recommend_update_quality_all()
+        self._db.commit()
 
         # avoid crash
         GObject.idle_add(lambda: self._progress_dialog.destroy())
@@ -277,6 +351,11 @@ class App(Gtk.Window):
 
     def _on_destroy(self, e=None):
         self._quit()
+
+    def _load_config(self):
+        css_provider = Gtk.CssProvider.new()
+        css_provider.load_from_data(b'* { font-size: 14pt; }')
+        Gtk.StyleContext.add_provider_for_screen(self.get_window().get_screen(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
     def _quit(self):
         Gtk.main_quit()
