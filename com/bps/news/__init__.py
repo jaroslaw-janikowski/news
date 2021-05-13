@@ -174,6 +174,16 @@ class App(Gtk.Window):
 
         # załadowanie konfiguracji i styli
         self._load_config()
+        self._set_default_style()
+
+    def _set_default_style(self):
+        filename = os.path.expanduser('~/.config/news/style.css')
+        if not os.path.exists(filename):
+            return
+
+        css_provider = Gtk.CssProvider.new()
+        css_provider.load_from_path(filename)
+        Gtk.StyleContext.add_provider_for_screen(self.get_window().get_screen(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
     def _on_mark_all_read(self, e):
         self._db.set_all_as_read()
