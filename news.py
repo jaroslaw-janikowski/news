@@ -232,8 +232,16 @@ class Application(tk.Tk):
         self._news_viewer_title = tk.Label(frame, **style['news.viewer.text'])
         self._news_viewer_title.pack(anchor=tk.NW, fill=tk.X, expand=False)
         self._news_viewer_text = ScrolledText(frame, wrap=tk.WORD, state=tk.DISABLED, **style['news.viewer.text'])
+        self._news_viewer_text.bind('<Up>', self._on_up_key)
+        self._news_viewer_text.bind('<Down>', self._on_down_key)
         self._news_viewer_text.pack(fill=tk.BOTH, expand=True)
         return frame
+
+    def _on_down_key(self, event=None):
+        self._news_viewer_text.yview_scroll(1, 'units')
+
+    def _on_up_key(self, event=None):
+        self._news_viewer_text.yview_scroll(-1, 'units')
 
     def _create_main_menu(self):
         menubar = tk.Menu(self, tearoff=False)
@@ -332,8 +340,12 @@ class Application(tk.Tk):
         self._news_viewer_text['state'] = tk.NORMAL
         self._news_viewer_text.delete('1.0', tk.END)
         self._news_viewer_text.insert(tk.END, parser.get_text())
+        self._news_viewer_text.mark_set(tk.INSERT, '1.0')
         self._news_viewer_text['state'] = tk.DISABLED
         self._news_viewer_title['text'] = news['title']
+
+        # zaznacz kontrolkę z treścią aby łatwo przewijać za pomocą strzałek
+        self._news_viewer_text.focus()
 
     def _on_add_folder(self, event=None):
         pass
