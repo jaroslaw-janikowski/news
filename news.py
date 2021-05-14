@@ -51,8 +51,24 @@ class Application(tk.Tk):
     def _create_channel_manager(self, master):
         self._channel_manager_channels = {}
         self._channel_manager_folders = {}
-        self._channel_manager_treeview = ttk.Treeview(master)
-        return self._channel_manager_treeview
+
+        frame = tk.Frame(master)
+        self._channel_manager_treeview = ttk.Treeview(frame)
+        self._channel_manager_treeview.grid(row=0, column=0, sticky=tk.NSEW)
+        scrollbar_v = tk.Scrollbar(frame, orient=tk.VERTICAL)
+        scrollbar_v.grid(row=0, column=1, sticky=tk.NS)
+        scrollbar_h = tk.Scrollbar(frame, orient=tk.HORIZONTAL)
+        scrollbar_h.grid(row=1, column=0, sticky=tk.EW)
+
+        self._channel_manager_treeview['yscrollcommand'] = scrollbar_v.set
+        self._channel_manager_treeview['xscrollcommand'] = scrollbar_h.set
+        scrollbar_v['command'] = self._channel_manager_treeview.yview
+        scrollbar_h['command'] = self._channel_manager_treeview.xview
+
+        frame.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=1)
+
+        return frame
 
     def _create_news_viewer(self, master):
         frame = tk.Frame(master)
@@ -135,7 +151,9 @@ class Application(tk.Tk):
     def _set_news(self, news):
         '''Wybiera news jako aktywny w programie. Parametr to słownik z bazy z tabeli news.'''
         # zaznacz i pokaż kanał w drzewie kanałów
-        self._channel_manager_treeview.selection_set(self._channel_manager_channels[news['channel_title']])
+        sel_item = self._channel_manager_channels[news['channel_title']]
+        self._channel_manager_treeview.selection_set(sel_item)
+        self._channel_manager_treeview.see(sel_item)
 
         # załaduj treść do przeglądarki
         self._news_viewer_text.delete('1.0', tk.END)
