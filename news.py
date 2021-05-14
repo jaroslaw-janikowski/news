@@ -165,8 +165,8 @@ class Application(tk.Tk):
         self._channel_manager_folders = {}
 
         frame = tk.Frame(master, width=200)
-        self._channel_manager_treeview = ttk.Treeview(frame, columns=('#item-count',))
-        self._channel_manager_treeview.column('#item-count', width=40, stretch=tk.YES)
+        self._channel_manager_treeview = ttk.Treeview(frame, columns=('#news-count',))
+        self._channel_manager_treeview.column('#news-count', width=40, stretch=tk.YES)
         self._channel_manager_treeview.grid(row=0, column=0, sticky=tk.NSEW)
         scrollbar_v = tk.Scrollbar(frame, orient=tk.VERTICAL)
         scrollbar_v.grid(row=0, column=1, sticky=tk.NS)
@@ -256,6 +256,12 @@ class Application(tk.Tk):
         # oznacz poprzedni aktywny news jako przeczytany
         if self._current_news:
             self._db_cursor.execute('update news set is_read = 1 where id = ?', (self._current_news['id'],))
+
+            # zmniejsz o 1 ilość nieprzeczytanych newsów w tym kanale
+            tree_item = self._channel_manager_treeview.selection()[0]
+            news_count = int(self._channel_manager_treeview.set(tree_item, '#news-count')) - 1
+            if news_count >= 0:
+                self._channel_manager_treeview.set(tree_item, '#news-count', news_count)
 
         # znajdź kolejny news
         news = self._db_cursor.execute('select news.*, channel.title as channel_title from news join channel on channel.id = news.channel_id where is_read = 0 order by quality desc limit 1').fetchone()
