@@ -142,7 +142,7 @@ class Application(tk.Tk):
             self._channel_manager_folders[row['title']] = i
 
         # dodaj kanały
-        self._db_cursor.execute('select *, count(news.id) as news_count from channel join news on news.channel_id = channel.id where news.is_read = 0 group by channel.id')
+        self._db_cursor.execute('select channel.*, (select count(id) from news where channel_id = channel.id and is_read = 0) as news_count from channel')
         for row in self._db_cursor.fetchall():
             parent_id = ''
             if row['folder_id'] is not None:
