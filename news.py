@@ -74,6 +74,46 @@ class NewsParser(html.parser.HTMLParser):
         return self._text.strip()
 
 
+class ProgressDialog(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.geometry('640x480')
+        self.title('Operation progress...')
+        self.transient(master)
+        self.bind('<Escape>', self._on_escape)
+
+        progress_label = tk.Label(self, text='Progress')
+        progress_label.grid(row=0, column=0, sticky=tk.EW)
+        self._progressbar = ttk.Progressbar(self, value=0)
+        self._progressbar.grid(row=1, column=0, sticky=tk.EW)
+        self._text = tk.Text(self)
+        self._text.grid(row=2, column=0, sticky=tk.EW)
+        cancel_btn = tk.Button(self, text='Cancel', command=self._on_escape)
+        cancel_btn.grid(row=3, column=0, sticky=tk.E)
+
+        self.columnconfigure(0, weight=1)
+
+    def _on_escape(self, event=None):
+        self.destroy()
+
+    def set_position(self, pos, msg=None):
+        self._progressbar['value'] = pos
+        if msg:
+            i = self._text.insert(tk.END, msg)
+            self._text.see(i)
+
+    def show(self):
+        self.deiconify()
+        self.wait_visibility()
+        self.grab_set()
+        self.wait_window()
+
+    def destroy(self):
+        self.withdraw()
+        self.grab_release()
+        super().destroy()
+
+
 class WaitDialog(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
@@ -297,8 +337,11 @@ class Application(tk.Tk):
     def _on_add_channel(self, event=None):
         pass
 
-    def _on_update_all(self):
-        pass
+    def _on_update_all(self, event=None):
+        dlg = ProgressDialog(self)
+
+        dlg.show()
+        dlg.destroy()
 
     def _on_quit(self, event=None):
         self._db_connection.commit()
