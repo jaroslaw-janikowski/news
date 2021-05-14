@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
 from tkinter.scrolledtext import ScrolledText
+from PIL import Image, ImageTk
 
 
 style = {
@@ -121,13 +122,22 @@ class Application(tk.Tk):
         self._wait_dlg = WaitDialog(self)
         self._current_news = None
 
+        self._load_resources()
         self._load_data()
+
+    def _load_resources(self):
+        self._icons = {
+            'folder': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/folder.png')),
+            'rss': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/rss.png')),
+            'youtube': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/youtube.png')),
+            'twitch': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/twitch.png'))
+        }
 
     def _load_data(self):
         # dodaj foldery
         folders = {}
         for row in self._db_cursor.execute('select * from folder').fetchall():
-            i = self._channel_manager_treeview.insert('', tk.END, text=row['title'])
+            i = self._channel_manager_treeview.insert('', tk.END, text=row['title'], image=self._icons['folder'])
             folders[row['id']] = i
             self._channel_manager_folders[row['title']] = i
 
@@ -137,7 +147,17 @@ class Application(tk.Tk):
             parent_id = ''
             if row['folder_id'] is not None:
                 parent_id = folders[row['folder_id']]
-            i = self._channel_manager_treeview.insert(parent_id, tk.END, row['id'], text=row['title'])
+
+            # wybór ikony ze względu na źródło danych
+            icon = None
+            if 'youtube' in row['url']:
+                icon = self._icons['youtube']
+            elif 'twitch' in row['url']:
+                icon = self._icons['twitch']
+            else:
+                icon = self._icons['rss']
+
+            i = self._channel_manager_treeview.insert(parent_id, tk.END, row['id'], text=row['title'], image=icon)
             self._channel_manager_channels[row['title']] = i
 
     def _create_channel_manager(self, master):
