@@ -8,6 +8,15 @@ from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 
 
+style = {
+    'news.viewer.text': {
+        'bg': '#000000',
+        'fg': '#2eff7b',
+        'font': ('roboto', 16, 'normal')
+    }
+}
+
+
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -25,7 +34,7 @@ class Application(tk.Tk):
         self._db_connection = sqlite3.connect(Path.home() / '.config' / 'news' / 'news.sqlite3')
         self._db_connection.row_factory = sqlite3.Row
         self._db_cursor = self._db_connection.cursor()
-        self._db_cursor.execute('pragma journal_mode=wal')
+        # self._db_cursor.execute('pragma journal_mode=wal')
 
         self._current_news = None
 
@@ -72,9 +81,9 @@ class Application(tk.Tk):
 
     def _create_news_viewer(self, master):
         frame = tk.Frame(master)
-        self._news_viewer_title = tk.Label(frame)
+        self._news_viewer_title = tk.Label(frame, **style['news.viewer.text'])
         self._news_viewer_title.pack(anchor=tk.NW, fill=tk.X, expand=False)
-        self._news_viewer_text = ScrolledText(frame)
+        self._news_viewer_text = ScrolledText(frame, **style['news.viewer.text'])
         self._news_viewer_text.pack(fill=tk.BOTH, expand=True)
         return frame
 
