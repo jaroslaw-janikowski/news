@@ -187,7 +187,7 @@ class Application(tk.Tk):
         frame = tk.Frame(master)
         self._news_viewer_title = tk.Label(frame, **style['news.viewer.text'])
         self._news_viewer_title.pack(anchor=tk.NW, fill=tk.X, expand=False)
-        self._news_viewer_text = ScrolledText(frame, wrap=tk.WORD, **style['news.viewer.text'])
+        self._news_viewer_text = ScrolledText(frame, wrap=tk.WORD, state=tk.DISABLED, **style['news.viewer.text'])
         self._news_viewer_text.pack(fill=tk.BOTH, expand=True)
         return frame
 
@@ -285,8 +285,10 @@ class Application(tk.Tk):
         parser.feed(news['summary'])
 
         # załaduj treść do przeglądarki
+        self._news_viewer_text['state'] = tk.NORMAL
         self._news_viewer_text.delete('1.0', tk.END)
         self._news_viewer_text.insert(tk.END, parser.get_text())
+        self._news_viewer_text['state'] = tk.DISABLED
         self._news_viewer_title['text'] = news['title']
 
     def _on_add_folder(self, event=None):
