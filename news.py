@@ -142,7 +142,7 @@ class Application(tk.Tk):
             self._channel_manager_folders[row['title']] = i
 
         # dodaj kanały
-        self._db_cursor.execute('select * from channel')
+        self._db_cursor.execute('select *, count(news.id) as news_count from channel join news on news.channel_id = channel.id where news.is_read = 0 group by channel.id')
         for row in self._db_cursor.fetchall():
             parent_id = ''
             if row['folder_id'] is not None:
@@ -157,7 +157,7 @@ class Application(tk.Tk):
             else:
                 icon = self._icons['rss']
 
-            i = self._channel_manager_treeview.insert(parent_id, tk.END, row['id'], text=row['title'], image=icon)
+            i = self._channel_manager_treeview.insert(parent_id, tk.END, row['id'], text=row['title'], image=icon, values=(row['news_count'],))
             self._channel_manager_channels[row['title']] = i
 
     def _create_channel_manager(self, master):
@@ -165,7 +165,8 @@ class Application(tk.Tk):
         self._channel_manager_folders = {}
 
         frame = tk.Frame(master, width=200)
-        self._channel_manager_treeview = ttk.Treeview(frame)
+        self._channel_manager_treeview = ttk.Treeview(frame, columns=('#item-count',))
+        self._channel_manager_treeview.column('#item-count', width=40, stretch=tk.YES)
         self._channel_manager_treeview.grid(row=0, column=0, sticky=tk.NSEW)
         scrollbar_v = tk.Scrollbar(frame, orient=tk.VERTICAL)
         scrollbar_v.grid(row=0, column=1, sticky=tk.NS)
