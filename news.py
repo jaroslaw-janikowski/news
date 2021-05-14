@@ -2,6 +2,7 @@
 
 import sqlite3
 from pathlib import Path
+import html.parser
 import webbrowser
 import tkinter as tk
 from tkinter import ttk
@@ -15,6 +16,30 @@ style = {
         'font': ('roboto', 16, 'normal')
     }
 }
+
+
+class NewsParser(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self._text = ''
+
+        self._processed_tags = []  # debug
+
+    def handle_endtag(self, tag):
+        if tag not in self._processed_tags:
+            print(f'Unprocessed tag: {tag}')
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'br':
+            self._text += '\n'
+
+        self._processed_tags = ['br']  # debug
+
+    def handle_data(self, data):
+        self._text += data
+
+    def get_text(self):
+        return self._text.strip()
 
 
 class Application(tk.Tk):
@@ -83,7 +108,7 @@ class Application(tk.Tk):
         frame = tk.Frame(master)
         self._news_viewer_title = tk.Label(frame, **style['news.viewer.text'])
         self._news_viewer_title.pack(anchor=tk.NW, fill=tk.X, expand=False)
-        self._news_viewer_text = ScrolledText(frame, **style['news.viewer.text'])
+        self._news_viewer_text = ScrolledText(frame, wrap=tk.WORD, **style['news.viewer.text'])
         self._news_viewer_text.pack(fill=tk.BOTH, expand=True)
         return frame
 
@@ -164,9 +189,13 @@ class Application(tk.Tk):
         self._channel_manager_treeview.selection_set(sel_item)
         self._channel_manager_treeview.see(sel_item)
 
+        # parsuj HTML
+        parser = NewsParser()
+        parser.feed(news['summary'])
+
         # załaduj treść do przeglądarki
         self._news_viewer_text.delete('1.0', tk.END)
-        self._news_viewer_text.insert(tk.END, news['summary'])
+        self._news_viewer_text.insert(tk.END, parser.get_text())
         self._news_viewer_title['text'] = news['title']
 
     def _on_add_folder(self, event=None):
