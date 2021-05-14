@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sqlite3
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
 
@@ -18,13 +20,6 @@ class NewsViewer(tk.Frame):
         self._text.pack(fill=tk.BOTH, expand=True)
 
 
-class ChannelManager(tk.Frame):
-    def __init__(self, master):
-        super().__init__(master)
-        self._treeview = ttk.Treeview(self)
-        self._treeview.pack(fill=tk.BOTH, expand=True)
-
-
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -37,7 +32,7 @@ class Application(tk.Tk):
         paned_h = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         paned_v = ttk.PanedWindow(paned_h, orient=tk.VERTICAL)
 
-        self._channel_manager = ChannelManager(paned_h)
+        self._create_channel_manager(paned_h)
         self._news_list = NewsList(paned_v)
         self._news_viewer = NewsViewer(paned_v)
 
@@ -47,9 +42,33 @@ class Application(tk.Tk):
         paned_v.pack(fill=tk.X, expand=True)
 
         # poziomy podział okna
-        paned_h.add(self._channel_manager, weight=1)
+        paned_h.add(self._create_channel_manager(paned_h), weight=1)
         paned_h.add(paned_v, weight=3)
         paned_h.pack(fill=tk.BOTH, expand=True)
+
+        self._db_connection = sqlite3.connect(Path.home() / '.config' / 'news' / 'news.sqlite3')
+        self._db_connection.row_factory = sqlite3.Row
+        self._db_cursor = self._db_connection.cursor()
+
+        self._load_data()
+
+    def _load_data(self):
+        # dodaj foldery
+        folders = {}
+        for row in self._db_cursor.execute('select * from folder').fetchall():
+            folders[row['id']] = self._channel_manager_treeview.insert('', tk.END, text=row['title'])
+
+        # dodaj kanały
+        self._db_cursor.execute('select * from channel')
+        for row in self._db_cursor.fetchall():
+            parent_id = ''
+            if row['folder_id'] is not None:
+                parent_id = folders[row['folder_id']]
+            self._channel_manager_treeview.insert(parent_id, tk.END, row['id'], text=row['title'])
+
+    def _create_channel_manager(self, master):
+        self._channel_manager_treeview = ttk.Treeview(master)
+        return self._channel_manager_treeview
 
     def _create_main_menu(self):
         menubar = tk.Menu(self, tearoff=False)
@@ -118,6 +137,8 @@ class Application(tk.Tk):
         pass
 
     def _on_quit(self, event=None):
+        self._db_connection.commit()
+        self._db_connection.close()
         self.quit()
 
 
