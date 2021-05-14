@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
+import io
 import sqlite3
+import requests
 import threading
 import subprocess
+import feedparser
 import webbrowser
+import collections
 import html.parser
 import tkinter as tk
 from tkinter import ttk
@@ -75,7 +79,7 @@ class NewsParser(html.parser.HTMLParser):
 
 
 class ProgressDialog(tk.Toplevel):
-    def __init__(self, master):
+    def __init__(self, master, num_steps):
         super().__init__(master)
         self.geometry('640x480')
         self.title('Operation progress...')
@@ -84,7 +88,7 @@ class ProgressDialog(tk.Toplevel):
 
         progress_label = tk.Label(self, text='Progress')
         progress_label.grid(row=0, column=0, sticky=tk.EW)
-        self._progressbar = ttk.Progressbar(self, value=0)
+        self._progressbar = ttk.Progressbar(self, value=0, length=num_steps)
         self._progressbar.grid(row=1, column=0, sticky=tk.EW)
         self._text = tk.Text(self)
         self._text.grid(row=2, column=0, sticky=tk.EW)
@@ -99,14 +103,14 @@ class ProgressDialog(tk.Toplevel):
     def set_position(self, pos, msg=None):
         self._progressbar['value'] = pos
         if msg:
-            i = self._text.insert(tk.END, msg)
-            self._text.see(i)
+            self._text.insert(tk.END, msg+'\n')
+            self._text.see(tk.END)
 
     def show(self):
         self.deiconify()
         self.wait_visibility()
         self.grab_set()
-        self.wait_window()
+        # self.wait_window()
 
     def destroy(self):
         self.withdraw()
@@ -338,10 +342,100 @@ class Application(tk.Tk):
         pass
 
     def _on_update_all(self, event=None):
-        dlg = ProgressDialog(self)
+        channels = self._db_cursor.execute('select * from channel').fetchall()
 
+        dlg = ProgressDialog(self, len(channels))
         dlg.show()
+
+        for index, channel in enumerate(channels):
+            dlg.set_position(index, msg=f"Pobieram wiadomości z kanału {channel['title']}...")
+            self.update_idletasks()
+
+            try:
+                resp = requests.get(channel['url'], timeout=10.0)
+            except:
+                dlg.set_position(index, msg=f"Nie można pobrać wiadomości dla kanału {channel['title']}.")
+                continue
+
+            data = feedparser.parse(io.BytesIO(resp.content))
+            news = data['items']
+
+            # create list of values
+            insert_values = []
+            for d in news:
+                # sanityzuj tytuł
+                title = d['title'].replace('\n', '')
+                insert_values.append((channel['id'], news['title'], d['link'], d['summary']))
+
+            # build query with placeholders
+            placeholders = ["(?, ?, ?, ?)" for t in insert_values]
+            insert_sql = f"""
+                insert or ignore into news(
+                    channel_id,
+                    title,
+                    url,
+                    summary
+                )
+                values {','.join(placeholders)}
+            """
+
+            # insert
+            try:
+                self._db_cursor.execute(insert_sql, [d for sublist in insert_values for d in sublist])
+            except sqlite3.OperationalError:
+                pass
+            finally:
+                # uaktualnij liczbę nieprzeczytanych w kanale
+                channel_item = self._channel_manager_channels[channel['title']]
+                self._channel_manager_treeview.set(channel_item, '#news-count', len(news))
+
+        # uaktualnij wagi newsów
+        dlg.set_position(0, msg='Uaktualniam rekomendacje...')
+        self._recommend_update_quality_all()
+
         dlg.destroy()
+
+    def _recommend_count_words(self, text):
+        # usuń znaki specjalne
+        spec = '~!@#$%^&*()_+{}:"|<>?`-=[];\'\\,./'
+        for spec_char in spec:
+            text = text.replace(spec_char, ' ')
+
+        # usuń słowa 3 znakowe lub krótsze
+        text = text.split()
+        text = [word.lower() for word in text if len(word) > 3]
+
+        # policz słowa
+        c = collections.Counter(text)
+        return c.most_common()
+
+    def _recommend_update_words(self, words_count):
+        # aktualizuj tabelę words
+        for word, count in words_count:
+            sql = 'insert into words(word, weight) values(?, ?) on conflict(word) do update set weight = weight + ? where word = ?'
+            self._db_cursor.execute(sql, (word, count, count, word))
+
+    def _recommend_update_quality_all(self):
+        '''Aktualizuje pole quality dla wszystkich nie przeczytanych newsów'''
+        sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0"
+        q = self._db_cursor.execute(sql)
+        for row in q.fetchall():
+            words = [f'"{i}"' for i, c in self._recommend_count_words(row['text'])]
+            words_list = f'({",".join(words)})'
+            new_quality = self._db_cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
+            if new_quality is not None:
+                self._db_cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
+
+    def _recommend_update_quality(self, word):
+        # znajdź wszystkie nie przejrzane zawierajace słowo
+        sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0 and (channel.title || ' ' || news.title || ' ' || summary) like ? collate nocase"
+        q = self._db_cursor.execute(sql, (f'%{word}%',))
+        for row in q:
+            words = [f'"{i}"' for i, c in self._recommend_count_words(row['text'])]
+            words_list = f'({",".join(words)})'
+            new_quality = self._db_cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
+            if new_quality is not None:
+                self._db_cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
 
     def _on_quit(self, event=None):
         self._db_connection.commit()
