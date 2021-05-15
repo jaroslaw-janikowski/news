@@ -377,7 +377,7 @@ class Application(tk.Tk):
             for d in news:
                 # sanityzuj tytuł
                 title = d['title'].replace('\n', '')
-                insert_values.append((channel['id'], news['title'], d['link'], d['summary']))
+                insert_values.append((channel['id'], d['title'], d['link'], d['summary']))
 
             # build query with placeholders
             placeholders = ["(?, ?, ?, ?)" for t in insert_values]
