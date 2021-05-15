@@ -78,6 +78,46 @@ class NewsParser(html.parser.HTMLParser):
         return self._text.strip()
 
 
+class ChannelDialog(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.title('Add / edit channel info')
+        self.withdraw()
+        self.geometry('300x400')
+        self.transient(master)
+        self.bind('<Escape>', self._on_cancel)
+
+        tk.Label(self, text='Channel title').pack(fill=tk.X)
+        self._channel_title = tk.Entry(self)
+        self._channel_title.pack(fill=tk.X)
+
+        tk.Label(self, text='URL').pack()
+        self._channel_url = tk.Entry(self)
+        self._channel_url.pack(fill=tk.X)
+
+        button_cancel = tk.Button(self, text='Cancel', command=self._on_cancel)
+        button_cancel.pack(fill=tk.X)
+
+        button_ok = tk.Button(self, text='Ok', command=self._on_apply)
+        button_ok.pack(fill=tk.X)
+
+    def _on_cancel(self, event=None):
+        self.hide()
+
+    def _on_apply(self, event=None):
+        self.hide()
+
+    def show(self):
+        self.deiconify()
+        self.wait_visibility()
+        self.grab_set()
+        self.wait_window()
+
+    def hide(self):
+        self.grab_release()
+        self.withdraw()
+
+
 class ProgressDialog(tk.Toplevel):
     def __init__(self, master, num_steps):
         super().__init__(master)
@@ -354,7 +394,9 @@ class Application(tk.Tk):
         pass
 
     def _on_add_channel(self, event=None):
-        pass
+        dlg = ChannelDialog(self)
+        dlg.show()
+        dlg.destroy()
 
     def _on_update_all(self, event=None):
         channels = self._db_cursor.execute('select * from channel').fetchall()
