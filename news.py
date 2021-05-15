@@ -229,8 +229,8 @@ class Application(tk.Tk):
 
     def _create_news_viewer(self, master):
         frame = tk.Frame(master)
-        self._news_viewer_title = tk.Label(frame, **style['news.viewer.text'])
-        self._news_viewer_title.pack(anchor=tk.NW, fill=tk.X, expand=False)
+        self._news_viewer_title = tk.Text(frame, wrap=tk.WORD, height=3, state=tk.DISABLED, **style['news.viewer.text'])
+        self._news_viewer_title.pack()
         self._news_viewer_text = ScrolledText(frame, wrap=tk.WORD, state=tk.DISABLED, **style['news.viewer.text'])
         self._news_viewer_text.bind('<Up>', self._on_up_key)
         self._news_viewer_text.bind('<Down>', self._on_down_key)
@@ -342,7 +342,10 @@ class Application(tk.Tk):
         self._news_viewer_text.insert(tk.END, parser.get_text())
         self._news_viewer_text.mark_set(tk.INSERT, '1.0')
         self._news_viewer_text['state'] = tk.DISABLED
-        self._news_viewer_title['text'] = news['title']
+        self._news_viewer_title['state'] =  tk.NORMAL
+        self._news_viewer_title.delete('1.0', tk.END)
+        self._news_viewer_title.insert(tk.END, news['title'])
+        self._news_viewer_title['state'] = tk.DISABLED
 
         # zaznacz kontrolkę z treścią aby łatwo przewijać za pomocą strzałek
         self._news_viewer_text.focus()
@@ -394,12 +397,15 @@ class Application(tk.Tk):
             # insert
             try:
                 self._db_cursor.execute(insert_sql, [d for sublist in insert_values for d in sublist])
-            except sqlite3.OperationalError:
+            except sqlite3.OperationalError as e:
                 pass
             finally:
+                # ustal ilość nieprzeczytanych dla tego kanału (returning nie działa dla tej wersji sqlite3)
+                inserted_count = self._db_cursor.execute('select count(id) from news where channel_id = ? and is_read = 0', (channel['id'],)).fetchone()[0]
+
                 # uaktualnij liczbę nieprzeczytanych w kanale
                 channel_item = self._channel_manager_channels[channel['title']]
-                self._channel_manager_treeview.set(channel_item, '#news-count', len(news))
+                self._channel_manager_treeview.set(channel_item, '#news-count', inserted_count)
 
         # uaktualnij wagi newsów
         dlg.set_position(0, msg='Uaktualniam rekomendacje...')
