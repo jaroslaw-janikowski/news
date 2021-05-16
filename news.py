@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import io
+import re
 import sqlite3
 import requests
 import threading
@@ -82,40 +83,82 @@ class ChannelDialog(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
         self.title('Add / edit channel info')
-        self.withdraw()
-        self.geometry('300x400')
         self.transient(master)
         self.bind('<Escape>', self._on_cancel)
 
-        tk.Label(self, text='Channel title').pack(fill=tk.X)
-        self._channel_title = tk.Entry(self)
-        self._channel_title.pack(fill=tk.X)
+        self._result = False  # naciśnięto escape lub cancel
 
-        tk.Label(self, text='URL').pack()
-        self._channel_url = tk.Entry(self)
-        self._channel_url.pack(fill=tk.X)
+        tk.Label(self, text='Channel title').pack(fill=tk.X, padx=2)
+        self._channel_title = tk.StringVar()
+        self._channel_title.trace('w', self._validate)
+        channel_title_entry = tk.Entry(self, textvariable=self._channel_title)
+        channel_title_entry.pack(fill=tk.X, padx=2)
+        channel_title_entry.focus()
+
+        tk.Label(self, text='URL').pack(fill=tk.X, padx=2)
+        self._channel_url = tk.StringVar()
+        self._channel_url.trace('w', self._validate)
+        channel_url_entry = tk.Entry(self)
+        channel_url_entry.pack(fill=tk.X, padx=2)
 
         button_cancel = tk.Button(self, text='Cancel', command=self._on_cancel)
-        button_cancel.pack(fill=tk.X)
+        button_cancel.pack(fill=tk.X, padx=2)
 
-        button_ok = tk.Button(self, text='Ok', command=self._on_apply)
-        button_ok.pack(fill=tk.X)
+        self._button_ok = tk.Button(self, text='Ok', state=tk.DISABLED, command=self._on_apply)
+        self._button_ok.pack(fill=tk.X, padx=2)
+
+    def _validate(self, *args):
+        self._autopopulate_form()
+
+        b = all([
+            self._channel_title.get(),
+            self._channel_url.get()
+        ])
+
+        self._button_ok['state'] = (tk.NORMAL if b else tk.DISABLED)
+
+    def _autopopulate_form(self):
+        url = self._channel_title.get()
+
+        # link do kanału youtube
+        m = re.match(r'^https:\/\/www\.youtube\.com\/channel\/([a-zA-Z0-9_\-]+)$', url)
+        if m is not None:
+            channel_id = m.group(1)
+            self._rss_url_entry.set_text(f'https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}')
+            self._rss_title_entry.set_text(channel_id)
+            return True
+
+        # link do usera youtube
+        m = re.match(r'^https:\/\/www\.youtube\.com\/user\/([a-zA-Z0-9_\-]+)$', url)
+        if m is not None:
+            user_id = m.group(1)
+            self._rss_url_entry.set_text(f'https://www.youtube.com/feeds/videos.xml?user={user_id}')
+            self._rss_title_entry.set_text(user_id)
+            return True
 
     def _on_cancel(self, event=None):
-        self.hide()
+        self._result = False
+        self.destroy()
 
     def _on_apply(self, event=None):
-        self.hide()
+        self._result = True
+        self.destroy()
 
-    def show(self):
-        self.deiconify()
-        self.wait_visibility()
+    def set_data(self, channel):
+        self._channel_title.set(channel['title'])
+        self._channel_url.set(channel['url'])
+
+    def get_data(self):
+        return {
+            'title': self._channel_title.get(),
+            'url': self._channel_url.get()
+        }
+
+    def run(self):
         self.grab_set()
         self.wait_window()
-
-    def hide(self):
         self.grab_release()
-        self.withdraw()
+        return self.get_data() if self._result else None
 
 
 class ProgressDialog(tk.Toplevel):
@@ -395,7 +438,19 @@ class Application(tk.Tk):
 
     def _on_add_channel(self, event=None):
         dlg = ChannelDialog(self)
-        dlg.show()
+        if dlg.run():
+            channel = dlg.get_data()
+
+            self._db_cursor.execute('insert into channel(title, url) values (?, ?)', (channel['title'], channel['url']))
+
+            icon = 'rss'
+            if 'youtube' in data['url']:
+                icon = 'youtube'
+            elif 'twitch' in data['url']:
+                icon = 'twitch'
+
+            self._channel_manager_channels[channel['title']] = self._channel_manager_treeview.insert('', tk.END, text=channel['title'], image=self._icons[icon])
+
         dlg.destroy()
 
     def _on_update_all(self, event=None):
@@ -498,8 +553,9 @@ class Application(tk.Tk):
                 self._db_cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
 
     def _on_quit(self, event=None):
-        self._db_connection.commit()
-        self._db_connection.close()
+        if self._db_connection:
+            self._db_connection.commit()
+            self._db_connection.close()
         self.quit()
 
 
