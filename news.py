@@ -164,19 +164,19 @@ class ChannelDialog(tk.Toplevel):
 class ProgressDialog(tk.Toplevel):
     def __init__(self, master, num_steps):
         super().__init__(master)
-        self.geometry('640x480')
+        # self.geometry('640x480')
         self.title('Operation progress...')
         self.transient(master)
         self.bind('<Escape>', self._on_escape)
 
         progress_label = tk.Label(self, text='Progress')
-        progress_label.grid(row=0, column=0, sticky=tk.EW)
+        progress_label.grid(row=0, column=0, sticky=tk.EW, padx=2, pady=2)
         self._progressbar = ttk.Progressbar(self, value=0, length=num_steps)
-        self._progressbar.grid(row=1, column=0, sticky=tk.EW)
+        self._progressbar.grid(row=1, column=0, sticky=tk.EW, padx=2, pady=2)
         self._text = tk.Text(self)
-        self._text.grid(row=2, column=0, sticky=tk.EW)
+        self._text.grid(row=2, column=0, sticky=tk.EW, padx=2, pady=2)
         cancel_btn = tk.Button(self, text='Cancel', command=self._on_escape)
-        cancel_btn.grid(row=3, column=0, sticky=tk.E)
+        cancel_btn.grid(row=3, column=0, sticky=tk.E, padx=2, pady=2)
 
         self.columnconfigure(0, weight=1)
 
