@@ -313,12 +313,31 @@ class Application(tk.Tk):
     def _create_news_viewer(self, master):
         frame = tk.Frame(master)
         self._news_viewer_title = tk.Text(frame, wrap=tk.WORD, height=3, state=tk.DISABLED, **style['news.viewer.text'])
-        self._news_viewer_title.pack()
+        self._news_viewer_title.grid(row=0, column=0, sticky=tk.NSEW)
+
+        self._vote_up_btn = tk.Button(frame, text='0', command=self._on_vote_up)
+        self._vote_up_btn.grid(row=0, column=1, sticky=tk.NSEW)
+
         self._news_viewer_text = ScrolledText(frame, wrap=tk.WORD, state=tk.DISABLED, **style['news.viewer.text'])
         self._news_viewer_text.bind('<Up>', self._on_up_key)
         self._news_viewer_text.bind('<Down>', self._on_down_key)
-        self._news_viewer_text.pack(fill=tk.BOTH, expand=True)
+        self._news_viewer_text.grid(row=1, column=0, columnspan=2, sticky=tk.NSEW)
+
+        frame.rowconfigure(0, weight=0)
+        frame.rowconfigure(1, weight=1)
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=0)
+
         return frame
+
+    def _on_vote_up(self, event=None):
+        channel_title = self._current_news['channel_title']
+        text = f'{channel_title} {self._current_news["title"]} {self._current_news["summary"]}'.lower()
+
+        r = self._recommend_count_words(text)
+        self._recommend_update_words(r)
+        for word, count in r:
+            self._recommend_update_quality(word)
 
     def _on_down_key(self, event=None):
         self._news_viewer_text.yview_scroll(1, 'units')
@@ -429,6 +448,7 @@ class Application(tk.Tk):
         self._news_viewer_title.delete('1.0', tk.END)
         self._news_viewer_title.insert(tk.END, news['title'])
         self._news_viewer_title['state'] = tk.DISABLED
+        self._vote_up_btn['text'] = news['quality']
 
         # zaznacz kontrolkę z treścią aby łatwo przewijać za pomocą strzałek
         self._news_viewer_text.focus()
