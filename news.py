@@ -386,7 +386,9 @@ class Application(tk.Tk):
         pass
 
     def _on_mark_all_as_read(self, event=None):
-        pass
+        self._db_cursor.execute('update news set is_read = 1')
+        for channel_title, channel_iid in self._channel_manager_channels.items():
+            self._channel_manager_treeview.set(channel_iid, '#news-count', 0)
 
     def _on_streamlink_360p(self, event=None):
         if self._current_news:
