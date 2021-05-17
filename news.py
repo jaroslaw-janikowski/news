@@ -234,6 +234,8 @@ class Application(tk.Tk):
 
         self.config(menu=self._create_main_menu())
 
+        self._load_resources()
+
         paned_h = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         paned_h.add(self._create_channel_manager(paned_h), weight=0)
         paned_h.add(self._create_news_viewer(paned_h), weight=1)
@@ -247,7 +249,6 @@ class Application(tk.Tk):
         self._wait_dlg = WaitDialog(self)
         self._current_news = None
 
-        self._load_resources()
         self._load_data()
 
     def _load_resources(self):
@@ -255,7 +256,8 @@ class Application(tk.Tk):
             'folder': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/folder.png')),
             'rss': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/rss.png')),
             'youtube': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/youtube.png')),
-            'twitch': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/twitch.png'))
+            'twitch': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/twitch.png')),
+            'like': ImageTk.PhotoImage(Image.open('/usr/share/icons/news/like.png'))
         }
 
     def _load_data(self):
@@ -313,7 +315,7 @@ class Application(tk.Tk):
         self._news_viewer_title = tk.Text(frame, wrap=tk.WORD, height=3, state=tk.DISABLED, **style['news.viewer.text'])
         self._news_viewer_title.grid(row=0, column=0, sticky=tk.NSEW)
 
-        self._vote_up_btn = tk.Button(frame, text='0', command=self._on_vote_up)
+        self._vote_up_btn = tk.Button(frame, text='0', command=self._on_vote_up, image=self._icons['like'], compound=tk.LEFT)
         self._vote_up_btn.grid(row=0, column=1, sticky=tk.NSEW)
 
         self._news_viewer_text = ScrolledText(frame, wrap=tk.WORD, state=tk.DISABLED, **style['news.viewer.text'])
