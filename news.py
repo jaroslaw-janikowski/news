@@ -160,7 +160,7 @@ class ChannelDialog(tk.Toplevel):
 
 
 class ProgressDialog(tk.Toplevel):
-    def __init__(self, master, num_steps):
+    def __init__(self, master):
         super().__init__(master)
         # self.geometry('640x480')
         self.title('Operation progress...')
@@ -169,7 +169,7 @@ class ProgressDialog(tk.Toplevel):
 
         progress_label = tk.Label(self, text='Progress')
         progress_label.grid(row=0, column=0, sticky=tk.EW, padx=2, pady=2)
-        self._progressbar = ttk.Progressbar(self, value=0, length=num_steps)
+        self._progressbar = ttk.Progressbar(self, value=0)
         self._progressbar.grid(row=1, column=0, sticky=tk.EW, padx=2, pady=2)
         self._text = tk.Text(self)
         self._text.grid(row=2, column=0, sticky=tk.EW, padx=2, pady=2)
@@ -472,18 +472,21 @@ class Application(tk.Tk):
 
     def _on_update_all(self, event=None):
         channels = self._db_cursor.execute('select * from channel').fetchall()
+        channel_count = len(channels)
 
-        dlg = ProgressDialog(self, len(channels))
+        dlg = ProgressDialog(self)
         dlg.show()
 
         for index, channel in enumerate(channels):
-            dlg.set_position(index, msg=f"Pobieram wiadomości z kanału {channel['title']}...")
+            status = ((index + 1) * 1 / channel_count) * 100
+
+            dlg.set_position(status, msg=f"Pobieram wiadomości z kanału {channel['title']}...")
             self.update_idletasks()
 
             try:
                 resp = requests.get(channel['url'], timeout=10.0)
             except:
-                dlg.set_position(index, msg=f"Nie można pobrać wiadomości dla kanału {channel['title']}.")
+                dlg.set_position(status, msg=f"Nie można pobrać wiadomości dla kanału {channel['title']}.")
                 continue
 
             data = feedparser.parse(io.BytesIO(resp.content))
@@ -522,7 +525,7 @@ class Application(tk.Tk):
                 self._channel_manager_treeview.set(channel_item, '#news-count', inserted_count)
 
         # uaktualnij wagi newsów
-        dlg.set_position(0, msg='Uaktualniam rekomendacje...')
+        dlg.set_position(100, msg='Uaktualniam rekomendacje...')
         self._recommend_update_quality_all()
 
         dlg.destroy()
