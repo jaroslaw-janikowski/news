@@ -8,7 +8,6 @@ import threading
 import subprocess
 import feedparser
 import webbrowser
-import collections
 import html.parser
 import tkinter as tk
 from tkinter import ttk
@@ -335,7 +334,7 @@ class Application(tk.Tk):
 
         r = self._recommend_count_words(text)
         self._recommend_update_words(r)
-        for word, count in r:
+        for word in r:
             self._recommend_update_quality(word)
 
     def _on_down_key(self, event=None):
@@ -536,24 +535,21 @@ class Application(tk.Tk):
 
         # usuń słowa 3 znakowe lub krótsze
         text = text.split()
-        text = [word.lower() for word in text if len(word) > 3]
-
-        # policz słowa
-        c = collections.Counter(text)
-        return c.most_common()
+        text = list(set([word.lower() for word in text if len(word) > 3]))
+        return text
 
     def _recommend_update_words(self, words_count):
         # aktualizuj tabelę words
-        for word, count in words_count:
-            sql = 'insert into words(word, weight) values(?, ?) on conflict(word) do update set weight = weight + ? where word = ?'
-            self._db_cursor.execute(sql, (word, count, count, word))
+        for word in words_count:
+            sql = 'insert into words(word, weight) values(?, 1) on conflict(word) do update set weight = weight + 1 where word = ?'
+            self._db_cursor.execute(sql, (word, word))
 
     def _recommend_update_quality_all(self):
         '''Aktualizuje pole quality dla wszystkich nie przeczytanych newsów'''
         sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0"
         q = self._db_cursor.execute(sql)
         for row in q.fetchall():
-            words = [f'"{i}"' for i, c in self._recommend_count_words(row['text'])]
+            words = list(set([f'"{i}"' for i in self._recommend_count_words(row['text'])]))
             words_list = f'({",".join(words)})'
             new_quality = self._db_cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
             if new_quality is not None:
@@ -564,7 +560,7 @@ class Application(tk.Tk):
         sql = "select news.id, (channel.title || ' ' || news.title || ' ' || summary) as text from news join channel on channel.id = news.channel_id where is_read = 0 and (channel.title || ' ' || news.title || ' ' || summary) like ? collate nocase"
         q = self._db_cursor.execute(sql, (f'%{word}%',))
         for row in q:
-            words = [f'"{i}"' for i, c in self._recommend_count_words(row['text'])]
+            words = list(set([f'"{i}"' for i in self._recommend_count_words(row['text'])]))
             words_list = f'({",".join(words)})'
             new_quality = self._db_cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
             if new_quality is not None:
