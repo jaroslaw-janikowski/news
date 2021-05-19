@@ -305,10 +305,40 @@ class Application(tk.Tk):
         scrollbar_v['command'] = self._channel_manager_treeview.yview
         scrollbar_h['command'] = self._channel_manager_treeview.xview
 
+        # drag and drop
+        self._dragged_item = None
+        self._channel_manager_treeview.bind('<ButtonPress-1>', self._on_channel_manager_button_press)
+        self._channel_manager_treeview.bind('<ButtonRelease-1>', self._on_channel_manager_button_release)
+        self._channel_manager_treeview.bind('<B1-Motion>', self._on_channel_manager_motion)
+
         frame.rowconfigure(0, weight=1)
         frame.columnconfigure(0, weight=1)
 
         return frame
+
+    def _on_channel_manager_button_press(self, event):
+        self._dragged_item = self._channel_manager_treeview.identify_row(event.y)
+
+    def _on_channel_manager_button_release(self, event):
+        target = self._channel_manager_treeview.identify_row(event.y)
+
+        # target nie może trafić do samego siebie
+        if target == self._dragged_item:
+            return 'break'
+
+        # target musi być folderem
+        if target not in self._channel_manager_folders.values():
+            return 'break'
+
+        self._channel_manager_treeview.move(self._dragged_item, target, tk.END)
+
+        # zmiana folderu w bazie
+        folder_title = tuple(k for k, v in self._channel_manager_folders.items() if v == target)[0]
+        channel_title = tuple(k for k, v in self._channel_manager_channels.items() if v == self._dragged_item)[0]
+        self._db_cursor.execute('update channel set folder_id = (select id from folder where title = ? limit 1) where title = ?', (folder_title, channel_title))
+
+    def _on_channel_manager_motion(self, event):
+        self._channel_manager_treeview['cursor'] = 'plus'
 
     def _create_news_viewer(self, master):
         frame = tk.Frame(master)
