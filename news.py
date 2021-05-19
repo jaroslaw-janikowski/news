@@ -312,7 +312,8 @@ class Application(tk.Tk):
 
     def _create_news_viewer(self, master):
         frame = tk.Frame(master)
-        self._news_viewer_title = tk.Text(frame, wrap=tk.WORD, height=3, state=tk.DISABLED, **style['news.viewer.text'])
+        self._news_viewer_title = tk.Text(frame, wrap=tk.WORD, height=3, state=tk.DISABLED, cursor='hand1', **style['news.viewer.text'])
+        self._news_viewer_title.bind('<Button-1>', self._on_goto_news)
         self._news_viewer_title.grid(row=0, column=0, sticky=tk.NSEW)
 
         self._vote_up_btn = tk.Button(frame, text='0', command=self._on_vote_up, image=self._icons['like'], compound=tk.LEFT)
