@@ -339,6 +339,10 @@ class Application(tk.Tk):
         for word in r:
             self._recommend_update_quality(word)
 
+        # uaktualnij wartość na przycisku
+        self._current_news = self._db_cursor.execute('select * from news where id = ? limit 1', (self._current_news['id'],)).fetchone()
+        self._vote_up_btn['text'] = self._current_news['quality']
+
     def _on_down_key(self, event=None):
         self._news_viewer_text.yview_scroll(1, 'units')
 
