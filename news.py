@@ -78,6 +78,35 @@ class NewsParser(html.parser.HTMLParser):
         return self._text.strip()
 
 
+class AboutDialog(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.transient(master)
+        self.title('About')
+        self.bind('<Escape>', self._on_ok_button)
+
+        label = tk.Label(self, text='Authors:')
+        label.pack(fill=tk.X)
+
+        text = tk.Text(self)
+        text.insert(tk.END, '''Authors:
+- jaroslaw.janikowski@gmail.com (programming)
+- www.freepik.com(icons) ''')
+        text['state'] = tk.DISABLED
+        text.pack(fill=tk.BOTH, expand=True)
+
+        self._ok_button = tk.Button(self, text='OK', command=self._on_ok_button)
+        self._ok_button.pack(anchor=tk.E)
+
+        self.wait_visibility()
+        self.grab_set()
+        self.wait_window()
+
+    def _on_ok_button(self, event=None):
+        self.grab_release()
+        self.destroy()
+
+
 class ChannelDialog(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
@@ -420,7 +449,7 @@ class Application(tk.Tk):
         return menubar
 
     def _on_about(self, event=None):
-        pass
+        dlg = AboutDialog(self)
 
     def _on_mark_all_as_read(self, event=None):
         self._db_cursor.execute('update news set is_read = 1')
