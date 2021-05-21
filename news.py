@@ -11,6 +11,7 @@ import webbrowser
 import html.parser
 import tkinter as tk
 from tkinter import ttk
+from tkinter.messagebox import askyesno
 from pathlib import Path
 from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageTk
@@ -425,6 +426,8 @@ class Application(tk.Tk):
         self.bind('<Control-n>', self._on_add_channel)
         channel_menu.add_command(label='Add folder', command=self._on_add_folder, accelerator='Ctrl-Shift-N')
         self.bind('<Control-Shift-n>', self._on_add_folder)
+        channel_menu.add_command(label='Remove channel', command=self._on_remove_channel, accelerator='Del')
+        self.bind('<Delete>', self._on_remove_channel)
         menubar.add_cascade(label='Channel', menu=channel_menu)
 
         news_menu = tk.Menu(self, tearoff=False)
@@ -518,6 +521,28 @@ class Application(tk.Tk):
 
         # zaznacz kontrolkę z treścią aby łatwo przewijać za pomocą strzałek
         self._news_viewer_text.focus()
+
+    def _on_remove_channel(self, event=None):
+        selection = self._channel_manager_treeview.selection()
+        if selection is None:
+            return
+
+        selected_id = selection[0]
+        channel_title = self._channel_manager_treeview.item(selected_id, option='text')
+
+        if not askyesno('Question', f'Do you really want to remove channel {channel_title}?'):
+            return
+
+        # czy zaznaczony element jest kanałem czy może folderem?
+        if channel_title not in self._channel_manager_channels.keys():
+            return
+
+        # usuń z bazy
+        self._db_cursor.execute('delete from channel where title = ?', (channel_title,))
+        self._db_cursor.execute('delete from news where channel_id = (select channel.id from channel where channel.title = ?)', (channel_title,))
+
+        # usuń z listy
+        self._channel_manager_treeview.delete(selected_id)
 
     def _on_add_folder(self, event=None):
         pass
