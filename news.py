@@ -11,7 +11,7 @@ import webbrowser
 import html.parser
 import tkinter as tk
 from tkinter import ttk
-from tkinter.messagebox import askyesno
+from tkinter.messagebox import askyesno, showerror
 from pathlib import Path
 from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageTk
@@ -106,6 +106,47 @@ class AboutDialog(tk.Toplevel):
     def _on_ok_button(self, event=None):
         self.grab_release()
         self.destroy()
+
+
+class FolderDialog(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.title('Add / edit folder')
+        self.transient(master)
+        self.bind('<Escape>', self._on_cancel)
+        self._result = None
+
+        tk.Label(self, text='Folder title').pack(fill=tk.X, padx=2)
+        self._folder_title_entry = tk.Entry(self)
+        self._folder_title_entry.bind('<FocusOut>', self._validate)
+        self._folder_title_entry.pack(fill=tk.X, padx=2)
+        self._folder_title_entry.focus()
+
+        button_cancel = tk.Button(self, text='Cancel', command=self._on_cancel)
+        button_cancel.pack(fill=tk.X, padx=2)
+
+        self._button_ok = tk.Button(self, text='Ok', state=tk.DISABLED, command=self._on_apply)
+        self._button_ok.pack(fill=tk.X, padx=2)
+
+    def _on_apply(self, event=None):
+        self._result = {
+            'title': self._folder_title_entry.get()
+        }
+        self.destroy()
+
+    def _validate(self, *args):
+        b = bool(self._folder_title_entry.get())
+        self._button_ok['state'] = (tk.NORMAL if b else tk.DISABLED)
+
+    def _on_cancel(self, event=None):
+        self._result = None
+        self.destroy()
+
+    def run(self):
+        self.grab_set()
+        self.wait_window()
+        self.grab_release()
+        return self._result
 
 
 class ChannelDialog(tk.Toplevel):
@@ -545,7 +586,16 @@ class Application(tk.Tk):
         self._channel_manager_treeview.delete(selected_id)
 
     def _on_add_folder(self, event=None):
-        pass
+        dlg = FolderDialog(self)
+        data = dlg.run()
+        if data:
+            try:
+                self._db_cursor.execute('insert into folder(title) values (?)', (data['title'],))
+                item_id = self._channel_manager_treeview.insert('', tk.END, text=data['title'], image=self._icons['folder'])
+                self._channel_manager_folders[data['title']] = item_id
+                self._channel_manager_treeview.selection_set(item_id)
+            except:
+                showerror('Error', 'Error while adding new folder.')
 
     def _on_add_channel(self, event=None):
         dlg = ChannelDialog(self)
