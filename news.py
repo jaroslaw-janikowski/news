@@ -338,6 +338,7 @@ class Application(tk.Tk):
             i = self._channel_manager_treeview.insert('', tk.END, text=row['title'], image=self._icons['folder'])
             folders[row['id']] = i
             self._channel_manager_folders[row['title']] = i
+            self._channel_manager_title_type[row['title']] = 'folder'
 
         # dodaj kanały
         self._db_cursor.execute('select channel.*, (select count(id) from news where channel_id = channel.id and is_read = 0) as news_count from channel')
@@ -357,10 +358,12 @@ class Application(tk.Tk):
 
             i = self._channel_manager_treeview.insert(parent_id, tk.END, row['id'], text=row['title'], image=icon, values=(row['news_count'],))
             self._channel_manager_channels[row['title']] = i
+            self._channel_manager_title_type[row['title']] = 'channel'
 
     def _create_channel_manager(self, master):
         self._channel_manager_channels = {}
         self._channel_manager_folders = {}
+        self._channel_manager_title_type = {}
 
         frame = tk.Frame(master, width=200)
         self._channel_manager_treeview = ttk.Treeview(frame, columns=('#news-count',))
@@ -467,8 +470,8 @@ class Application(tk.Tk):
         self.bind('<Control-n>', self._on_add_channel)
         channel_menu.add_command(label='Add folder', command=self._on_add_folder, accelerator='Ctrl-Shift-N')
         self.bind('<Control-Shift-n>', self._on_add_folder)
-        channel_menu.add_command(label='Remove channel', command=self._on_remove_channel, accelerator='Del')
-        self.bind('<Delete>', self._on_remove_channel)
+        channel_menu.add_command(label='Remove', command=self._on_remove_channel_or_folder, accelerator='Del')
+        self.bind('<Delete>', self._on_remove_channel_or_folder)
         menubar.add_cascade(label='Channel', menu=channel_menu)
 
         news_menu = tk.Menu(self, tearoff=False)
@@ -563,27 +566,33 @@ class Application(tk.Tk):
         # zaznacz kontrolkę z treścią aby łatwo przewijać za pomocą strzałek
         self._news_viewer_text.focus()
 
-    def _on_remove_channel(self, event=None):
+    def _on_remove_channel_or_folder(self, event=None):
         selection = self._channel_manager_treeview.selection()
         if selection is None:
             return
 
         selected_id = selection[0]
-        channel_title = self._channel_manager_treeview.item(selected_id, option='text')
+        title = self._channel_manager_treeview.item(selected_id, option='text')
+        type_ = self._channel_manager_title_type[title]
 
-        if not askyesno('Question', f'Do you really want to remove channel {channel_title}?'):
-            return
-
-        # czy zaznaczony element jest kanałem czy może folderem?
-        if channel_title not in self._channel_manager_channels.keys():
+        if not askyesno('Question', f'Do you really want to remove {title}?'):
             return
 
         # usuń z bazy
-        self._db_cursor.execute('delete from channel where title = ?', (channel_title,))
-        self._db_cursor.execute('delete from news where channel_id = (select channel.id from channel where channel.title = ?)', (channel_title,))
+        if type_ == 'folder':
+            # nie można usuwać nie pustych folderów
+            if self._channel_manager_treeview.get_children(selected_id):
+                showerror('Error', 'Could not remove non empty folder.')
+                return
+
+            self._db_cursor.execute('delete from folder where title = ?', (title,))
+        elif type_ == 'channel':
+            self._db_cursor.execute('delete from channel where title = ?', (title,))
+            self._db_cursor.execute('delete from news where channel_id = (select channel.id from channel where channel.title = ?)', (title,))
 
         # usuń z listy
         self._channel_manager_treeview.delete(selected_id)
+        del self._channel_manager_title_type[title]
 
     def _on_add_folder(self, event=None):
         dlg = FolderDialog(self)
@@ -594,6 +603,7 @@ class Application(tk.Tk):
                 item_id = self._channel_manager_treeview.insert('', tk.END, text=data['title'], image=self._icons['folder'])
                 self._channel_manager_folders[data['title']] = item_id
                 self._channel_manager_treeview.selection_set(item_id)
+                self._channel_manager_title_type[data['title']] = 'folder'
             except:
                 showerror('Error', 'Error while adding new folder.')
 
@@ -610,6 +620,7 @@ class Application(tk.Tk):
                 icon = 'twitch'
 
             self._channel_manager_channels[data['title']] = self._channel_manager_treeview.insert('', tk.END, text=data['title'], image=self._icons[icon])
+            self._channel_manager_title_type[data['title']] = 'channel'
 
         dlg.destroy()
 
