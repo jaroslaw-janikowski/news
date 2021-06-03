@@ -426,6 +426,8 @@ class Application(tk.Tk):
         self._news_viewer_text = ScrolledText(frame, wrap=tk.WORD, state=tk.DISABLED, **style['news.viewer.text'])
         self._news_viewer_text.bind('<Up>', self._on_up_key)
         self._news_viewer_text.bind('<Down>', self._on_down_key)
+        self._news_viewer_text.bind('<Home>', self._on_home_key)
+        self._news_viewer_text.bind('<End>', self._on_end_key)
         self._news_viewer_text.grid(row=1, column=0, columnspan=2, sticky=tk.NSEW)
 
         frame.rowconfigure(0, weight=0)
@@ -434,6 +436,13 @@ class Application(tk.Tk):
         frame.columnconfigure(1, weight=0)
 
         return frame
+
+    def _on_end_key(self, event=None):
+        # self._news_viewer_text.yview_moveto(1.0)
+        self._news_viewer_text.see(tk.END)
+
+    def _on_home_key(self, event=None):
+        self._news_viewer_text.yview_moveto(0)
 
     def _on_vote_up(self, event=None):
         channel_title = self._current_news['channel_title']
