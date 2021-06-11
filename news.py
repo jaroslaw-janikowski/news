@@ -535,10 +535,12 @@ class Application(tk.Tk):
             self._db_cursor.execute('update news set is_read = 1 where id = ?', (self._current_news['id'],))
 
             # zmniejsz o 1 ilość nieprzeczytanych newsów w tym kanale
-            tree_item = self._channel_manager_treeview.selection()[0]
-            news_count = int(self._channel_manager_treeview.set(tree_item, '#news-count')) - 1
-            if news_count >= 0:
-                self._channel_manager_treeview.set(tree_item, '#news-count', news_count)
+            sel = self._channel_manager_treeview.selection()
+            if sel:
+                tree_item = sel[0]
+                news_count = int(self._channel_manager_treeview.set(tree_item, '#news-count')) - 1
+                if news_count >= 0:
+                    self._channel_manager_treeview.set(tree_item, '#news-count', news_count)
 
         # znajdź kolejny news
         news = self._db_cursor.execute('select news.*, channel.title as channel_title from news join channel on channel.id = news.channel_id where is_read = 0 order by quality desc limit 1').fetchone()
