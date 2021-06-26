@@ -1,11 +1,16 @@
 install_dependencies_ubuntu:
-	sudo apt install python3 python3-tkinter python3-feedparser
+	sudo apt install python3 python3-tkinter python3-feedparser python3-feedgenerator
 
 install:
 	mkdir -p /usr/share/icons/news
 
 	cp ./news.py /usr/local/bin/news
 	chmod +x /usr/local/bin/news
+
+	mkdir -p /usr/lib/python3/dist-packages/bpsnews/scripts
+	cp ./bpsnews/__init__.py /usr/lib/python3/dist-packages/bpsnews/__init__.py
+	cp ./bpsnews/scripts/__init__.py /usr/lib/python3/dist-packages/bpsnews/scripts/__init__.py
+	cp ./bpsnews/scripts/zbiampl.py /usr/lib/python3/dist-packages/bpsnews/scripts/zbiampl.py
 
 	cp ./res/icons/folder.png /usr/share/icons/news/folder.png
 	cp ./res/icons/rss.png /usr/share/icons/news/rss.png
