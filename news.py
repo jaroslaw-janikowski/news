@@ -554,6 +554,10 @@ class Application(tk.Tk):
     def _on_next_news(self, event=None):
         # oznacz poprzedni aktywny news jako przeczytany
         if self._current_news:
+            # przywróć zaznaczenie na element z którego pochodzi bieżący news (ktoś mógł zmienić pomiędzy notatkami)
+            self._select_channel_news(self._current_news)
+
+            # oznacz jako przeczytany w bazie
             self._db_cursor.execute('update news set is_read = 1 where id = ?', (self._current_news['id'],))
 
             # zmniejsz o 1 ilość nieprzeczytanych newsów w tym kanale
@@ -574,12 +578,15 @@ class Application(tk.Tk):
 
         self._set_news(news)
 
-    def _set_news(self, news):
-        '''Wybiera news jako aktywny w programie. Parametr to słownik z bazy z tabeli news.'''
+    def _select_channel_news(self, news):
         # zaznacz i pokaż kanał w drzewie kanałów
         sel_item = self._channel_manager_channels[news['channel_title']]
         self._channel_manager_treeview.selection_set(sel_item)
         self._channel_manager_treeview.see(sel_item)
+
+    def _set_news(self, news):
+        '''Wybiera news jako aktywny w programie. Parametr to słownik z bazy z tabeli news.'''
+        self._select_channel_news(news)
 
         # parsuj HTML
         parser = NewsParser()
