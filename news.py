@@ -12,7 +12,7 @@ import webbrowser
 import html.parser
 import tkinter as tk
 from tkinter import ttk
-from tkinter.messagebox import askyesno, showerror
+from tkinter.messagebox import askyesno, showerror, showinfo
 from pathlib import Path
 from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageTk
@@ -42,6 +42,8 @@ class StreamlinkViewer(threading.Thread):
         self._run_streamlink(self._url, self._quality)
 
     def _run_streamlink(self, url, quality='worst'):
+        fallback_to_youtube_dl = False
+
         # run process in blocking mode
         with subprocess.Popen(['streamlink', url, quality, '-p', 'mpv'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as p:
             while p.stdout:
@@ -51,9 +53,28 @@ class StreamlinkViewer(threading.Thread):
                     break
 
                 # if certain line is detected then stop blocking main window
-                if b'Writing stream to output' in l:
+                elif b'Writing stream to output' in l:
                     if callable(self._on_start):
                         self._on_start()
+
+                # youtube premiere
+                elif l.startswith(b'[plugins.youtube][error] Could not get video info: Premiera za'):
+                    showinfo('Brak materiału wideo', 'Premiera jeszcze nie nastąpiła.')
+                    p.terminate()
+                    self._on_start()
+                    return
+
+                # protected youtube video shoul be downloaded by youtube-dl
+                elif url.startswith('https://www.youtube.com/watch') and b'[cli][error] This plugin does not support protected videos, try youtube-dl instead' in l:
+                    fallback_to_youtube_dl = True
+                    p.terminate()
+                    break
+
+        # youtube-dl fallback mode for "protected videos"
+        if fallback_to_youtube_dl:
+            quality = 'worst' if quality == 'worst' else '18'
+            subprocess.Popen([f'mpv `youtube-dl -g -f {quality} {url}`'], shell=True)
+            self._on_start()
 
 
 class NewsParser(html.parser.HTMLParser):
