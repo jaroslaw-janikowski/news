@@ -587,8 +587,11 @@ class Application(tk.Tk):
     def _select_channel_news(self, news):
         # zaznacz i pokaż kanał w drzewie kanałów
         sel_item = self._channel_manager_channels[news['channel_title']]
-        self._channel_manager_treeview.selection_set(sel_item)
-        self._channel_manager_treeview.see(sel_item)
+        try:
+            self._channel_manager_treeview.selection_set(sel_item)
+            self._channel_manager_treeview.see(sel_item)
+        except tk.TclError as e:
+            print(e)
 
     def _set_news(self, news):
         '''Wybiera news jako aktywny w programie. Parametr to słownik z bazy z tabeli news.'''
