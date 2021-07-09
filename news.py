@@ -258,6 +258,7 @@ class ProgressDialog(tk.Toplevel):
         # self.geometry('640x480')
         self.title('Operation progress...')
         self.transient(master)
+        self.bind('<Configure>', self._on_resize)
         self.bind('<Escape>', self._on_escape)
 
         progress_label = tk.Label(self, text='Progress')
@@ -265,11 +266,15 @@ class ProgressDialog(tk.Toplevel):
         self._progressbar = ttk.Progressbar(self, value=0)
         self._progressbar.grid(row=1, column=0, sticky=tk.EW, padx=2, pady=2)
         self._text = tk.Text(self)
-        self._text.grid(row=2, column=0, sticky=tk.EW, padx=2, pady=2)
+        self._text.grid(row=2, column=0, sticky=tk.NSEW, padx=2, pady=2)
         cancel_btn = tk.Button(self, text='Cancel', command=self._on_escape)
         cancel_btn.grid(row=3, column=0, sticky=tk.E, padx=2, pady=2)
 
         self.columnconfigure(0, weight=1)
+        self.rowconfigure(2, weight=1)
+
+    def _on_resize(self, event):
+        self.update_idletasks()
 
     def _on_escape(self, event=None):
         self.destroy()
@@ -279,6 +284,7 @@ class ProgressDialog(tk.Toplevel):
         if msg:
             self._text.insert(tk.END, msg+'\n')
             self._text.see(tk.END)
+        self.update_idletasks()
 
     def show(self):
         self.deiconify()
