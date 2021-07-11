@@ -521,6 +521,8 @@ class Application(tk.Tk):
         self.bind('1', self._on_streamlink_worst)
         news_menu.add_command(label='Streamlink 360p', command=self._on_streamlink_360p, accelerator='2')
         self.bind('2', self._on_streamlink_360p)
+        news_menu.add_command(label='Streamlink 480p', command=self._on_streamlink_480p, accelerator='3')
+        self.bind('3', self._on_streamlink_480p)
         news_menu.add_separator()
         news_menu.add_command(label='Mark all as read', command=self._on_mark_all_as_read, accelerator='Ctrl-M')
         self.bind('<Control-m>', self._on_mark_all_as_read)
@@ -545,6 +547,12 @@ class Application(tk.Tk):
         if self._current_news:
             self._wait_dlg.show()
             v = StreamlinkViewer(self._current_news['url'], '360p', on_start=self._wait_dlg.hide)
+            v.start()
+
+    def _on_streamlink_480p(self, event=None):
+        if self._current_news:
+            self._wait_dlg.show()
+            v = StreamlinkViewer(self._current_news['url'], '480p', on_start=self._wait_dlg.hide)
             v.start()
 
     def _on_streamlink_worst(self, event=None):
