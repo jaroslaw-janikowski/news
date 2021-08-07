@@ -727,6 +727,11 @@ class Application(tk.Tk):
             for d in news:
                 # sanityzuj tytuł
                 title = d['title'].replace('\n', '')
+
+                # summary musi być zawsze
+                if 'summary' not in d:
+                    d['summary'] = 'Brak.'
+
                 insert_values.append((channel['id'], d['title'], d['link'], d['summary']))
 
             # build query with placeholders

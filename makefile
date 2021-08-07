@@ -14,6 +14,7 @@ install:
 	cp ./bpsnews/scripts/tibiacom.py /usr/lib/python3/dist-packages/bpsnews/scripts/tibiacom.py
 	cp ./bpsnews/scripts/nowytydzienpl.py /usr/lib/python3/dist-packages/bpsnews/scripts/nowytydzienpl.py
 	cp ./bpsnews/scripts/strefa44pl.py /usr/lib/python3/dist-packages/bpsnews/scripts/strefa44pl.py
+	cp ./bpsnews/scripts/ohmydevpl.py /usr/lib/python3/dist-packages/bpsnews/scripts/ohmydevpl.py
 
 	cp ./res/icons/folder.png /usr/share/icons/news/folder.png
 	cp ./res/icons/rss.png /usr/share/icons/news/rss.png
