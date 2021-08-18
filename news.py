@@ -10,6 +10,7 @@ import subprocess
 import feedparser
 import webbrowser
 import html.parser
+import dotenv
 import tkinter as tk
 from tkinter import ttk
 from tkinter.messagebox import askyesno, showerror, showinfo
@@ -25,6 +26,7 @@ style = {
         'font': ('roboto', 16, 'normal')
     }
 }
+dotenv.load_dotenv(dotenv_path=Path.home() / '.config/news/.env')
 
 
 class StreamlinkViewer(threading.Thread):

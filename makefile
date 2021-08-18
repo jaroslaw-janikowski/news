@@ -16,6 +16,7 @@ install:
 	cp ./bpsnews/scripts/strefa44pl.py /usr/lib/python3/dist-packages/bpsnews/scripts/strefa44pl.py
 	cp ./bpsnews/scripts/ohmydevpl.py /usr/lib/python3/dist-packages/bpsnews/scripts/ohmydevpl.py
 	cp ./bpsnews/scripts/funker530com.py /usr/lib/python3/dist-packages/bpsnews/scripts/funker530com.py
+	cp ./bpsnews/scripts/twitchtv.py /usr/lib/python3/dist-packages/bpsnews/scripts/twitchtv.py
 
 	cp ./res/icons/folder.png /usr/share/icons/news/folder.png
 	cp ./res/icons/rss.png /usr/share/icons/news/rss.png
