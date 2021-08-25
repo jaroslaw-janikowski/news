@@ -16,7 +16,6 @@ class Spider:
             url = f'https://www.funker530.com/api/latest/?category_name=all&page={i}'
             print('pobieram porcję: ', i)
             resp = requests.get(url)
-            data = resp.json()['videos']
 
             # czy to już koniec paginacji artykułów?
             # podanie nieistniejącej strony
@@ -24,6 +23,8 @@ class Spider:
             if resp.status_code == 503:
                 print('Nie ma więcej artykułów.')
                 break
+
+            data = resp.json()['videos']
 
             # znajdź wszystkie posty i dodaj do dokumentu wynikowego
             for key_, article in data.items():
@@ -37,6 +38,11 @@ class Spider:
                 feed_gen.add_item(title, link, description)
 
             i += 1
+
+            # pobieraj tylko 2 najnowsze strony,
+            # stosowanie semafora nie ma sensu bo sortowanie po stronie serwera jest zjebane
+            if i > 5:
+                break
 
         # uczyń ostatni dodany pierwszym aby roadblock móg działać
         feed_gen.items.reverse()
