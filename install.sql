@@ -20,7 +20,7 @@ create table news(
     url varchar(512) not null unique,
     summary text not null,
     is_read boolean default 0,
-    quality int not null default 0,
+    quality real not null default 0.0,
     foreign key (channel_id) references channel(id)
 );
 

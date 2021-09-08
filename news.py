@@ -486,7 +486,7 @@ class Application(tk.Tk):
 
         # uaktualnij wartość na przycisku
         self._current_news = self._db_cursor.execute('select news.*, channel.title as channel_title from news join channel on news.channel_id = channel.id where news.id = ? limit 1', (self._current_news['id'],)).fetchone()
-        self._vote_up_btn['text'] = self._current_news['quality']
+        self._vote_up_btn['text'] = f"{self._current_news['quality']:.2f}"
 
     def _on_down_key(self, event=None):
         self._news_viewer_text.yview_scroll(1, 'units')
@@ -585,7 +585,7 @@ class Application(tk.Tk):
                     self._channel_manager_treeview.set(tree_item, '#news-count', news_count)
 
         # znajdź kolejny news
-        news = self._db_cursor.execute('select news.*, channel.title as channel_title from news join channel on channel.id = news.channel_id where is_read = 0 order by quality desc limit 1').fetchone()
+        news = self._db_cursor.execute('select news.*, channel.title as channel_title from news join channel on channel.id = news.channel_id where is_read = 0 order by quality asc limit 1').fetchone()
 
         self._current_news = news
 
@@ -621,7 +621,7 @@ class Application(tk.Tk):
         self._news_viewer_title.delete('1.0', tk.END)
         self._news_viewer_title.insert(tk.END, news['title'])
         self._news_viewer_title['state'] = tk.DISABLED
-        self._vote_up_btn['text'] = news['quality']
+        self._vote_up_btn['text'] = f"{news['quality']:.2f}"
 
         # zaznacz kontrolkę z treścią aby łatwo przewijać za pomocą strzałek
         self._news_viewer_text.focus()
@@ -791,7 +791,7 @@ class Application(tk.Tk):
         for row in q.fetchall():
             words = list(set([f'"{i}"' for i in self._recommend_count_words(row['text'])]))
             words_list = f'({",".join(words)})'
-            new_quality = self._db_cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
+            new_quality = self._db_cursor.execute(f'select {float(len(words_list))} / sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
             if new_quality is not None:
                 self._db_cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
 
@@ -802,7 +802,7 @@ class Application(tk.Tk):
         for row in q:
             words = list(set([f'"{i}"' for i in self._recommend_count_words(row['text'])]))
             words_list = f'({",".join(words)})'
-            new_quality = self._db_cursor.execute(f'select sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
+            new_quality = self._db_cursor.execute(f'select {float(len(words_list))} / sum(weight) from words where use = 1 and word in {words_list}').fetchone()[0]
             if new_quality is not None:
                 self._db_cursor.execute('update news set quality = ? where id = ?', (new_quality, row['id']))
 
