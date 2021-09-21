@@ -17,8 +17,8 @@ class Spider:
         feed_gen = feedgenerator.Rss201rev2Feed('tibia.com', 'https://tibia.com', 'RSS dla tibia.com')
 
         print('pobieram: ', self._start_url)
-        jsn = self._download(self._start_url)
         try:
+            jsn = self._download(self._start_url)
             doc = json.loads(jsn)
 
             # znajdź wszystkie posty i dodaj do dokumentu wynikowego
@@ -32,3 +32,5 @@ class Spider:
             return feed_gen.writeString('utf-8')
         except json.JSONDecodeError:
             print('Error: Tibia: brak zawartości JSON.')
+        except requests.exceptions.ConnectionError:
+            print('Error: Brak połączenia.')
