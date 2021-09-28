@@ -37,6 +37,9 @@ class Spider:
 
             i += 1
 
+            if i > 10:
+                break
+
         # uczyń ostatni dodany pierwszym aby roadblock móg działać
         feed_gen.items.reverse()
 
