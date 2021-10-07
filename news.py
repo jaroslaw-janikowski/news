@@ -697,29 +697,29 @@ class Application(tk.Tk):
             dlg.set_position(status, msg=f"Pobieram wiadomości z kanału {channel['title']}...")
             self.update_idletasks()
 
-            feed = None
-            if channel['url'].startswith('http'):
-                try:
+            try:
+                feed = None
+                if channel['url'].startswith('http'):
                     resp = requests.get(channel['url'], timeout=10.0)
                     feed = io.BytesIO(resp.content)
-                except:
-                    dlg.set_position(status, msg=f"Nie można pobrać wiadomości dla kanału {channel['title']}.")
-                    continue
-            elif channel['url'].startswith('script'):
-                script_name, url = channel['url'].split(':', maxsplit=2)[1:]
-                print(script_name, url)
-                pkg = f'bpsnews.scripts.{script_name}'
-                m = importlib.import_module(pkg)
-                klass = getattr(m, 'Spider')
+                elif channel['url'].startswith('script'):
+                    script_name, url = channel['url'].split(':', maxsplit=2)[1:]
+                    print(script_name, url)
+                    pkg = f'bpsnews.scripts.{script_name}'
+                    m = importlib.import_module(pkg)
+                    klass = getattr(m, 'Spider')
 
-                # ustal tytuł ostatniego newsa pobranego z tego źródła
-                last_news_title = self._db_cursor.execute('select * from news where channel_id = (select id from channel where title = ?) order by id desc limit 1', (channel['title'],)).fetchone()
-                if last_news_title:
-                    last_news_title = last_news_title['title']
+                    # ustal tytuł ostatniego newsa pobranego z tego źródła
+                    last_news_title = self._db_cursor.execute('select * from news where channel_id = (select id from channel where title = ?) order by id desc limit 1', (channel['title'],)).fetchone()
+                    if last_news_title:
+                        last_news_title = last_news_title['title']
 
-                # pobierz newsy
-                spider = klass(url, stop_title=last_news_title)
-                feed = spider.start()
+                    # pobierz newsy
+                    spider = klass(url, stop_title=last_news_title)
+                    feed = spider.start()
+            except:
+                dlg.set_position(status, msg=f"Nie można pobrać wiadomości dla kanału {channel['title']}.")
+                continue
 
             data = feedparser.parse(feed)
             news = data['items']
